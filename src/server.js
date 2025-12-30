@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { handleWebhook, verifyWebhook } from './webhook.js';
 import { supabase } from '../config/supabase.js';
 import { callMCPAdvisory } from './advisory.js';
+import { healthCheck } from './health.js';
 
 dotenv.config();
 
@@ -14,8 +15,9 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+app.get('/health', async (req, res) => {
+  const health = await healthCheck();
+  res.json(health);
 });
 
 // Test endpoints
