@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "src/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "src/server.js"
+    }
+  ],
+  "env": {
+    "WHATSAPP_TOKEN": "@whatsapp_token",
+    "WHATSAPP_PHONE_ID": "@whatsapp_phone_id", 
+    "WEBHOOK_VERIFY_TOKEN": "@webhook_verify_token",
+    "SUPABASE_URL": "@supabase_url",
+    "SUPABASE_SERVICE_KEY": "@supabase_service_key",
+    "SUPABASE_ANON_KEY": "@supabase_anon_key"
+  }
+}
