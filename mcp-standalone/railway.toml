@@ -1,9 +1,0 @@
-[build]
-builder = "nixpacks"
-
-[deploy]
-startCommand = "npm start"
-rootDirectory = "mcp-standalone"
-
-[env]
-PORT = { $ref = "PORT" }
