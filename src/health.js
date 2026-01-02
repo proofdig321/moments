@@ -1,41 +1,26 @@
-import pg from 'pg';
 import { supabase } from '../config/supabase.js';
-
-const { Client } = pg;
 
 export async function healthCheck() {
   const results = {
+    status: 'healthy',
     timestamp: new Date().toISOString(),
-    supabase: { status: 'unknown' },
-    postgres: { status: 'unknown' }
+    service: 'Unami Foundation Moments API',
+    version: '1.0.0',
+    environment: process.env.RAILWAY_ENVIRONMENT || 'local'
   };
 
-  // Test Supabase
-  try {
-    const { data, error } = await supabase.from('messages').select('count').limit(1);
-    if (error) throw error;
-    results.supabase = { status: 'connected', data };
-  } catch (err) {
-    results.supabase = { status: 'failed', error: err.message };
-  }
-
-  // Test direct PostgreSQL connection
-  if (process.env.DATABASE_URL) {
-    const client = new Client({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-    });
-
+  // Only test external services if environment variables are configured
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
     try {
-      await client.connect();
-      const result = await client.query('SELECT NOW() as current_time');
-      results.postgres = { status: 'connected', time: result.rows[0] };
-      await client.end();
+      const { data, error } = await supabase.from('messages').select('count').limit(1);
+      if (error) throw error;
+      results.supabase = { status: 'connected' };
     } catch (err) {
-      results.postgres = { status: 'failed', error: err.message };
+      results.supabase = { status: 'failed', error: err.message };
+      // Don't fail health check if Supabase is down
     }
   } else {
-    results.postgres = { status: 'no_url', message: 'DATABASE_URL not configured' };
+    results.supabase = { status: 'not_configured' };
   }
 
   return results;

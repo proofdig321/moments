@@ -85,12 +85,22 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Unami Foundation Moments API running on port ${PORT}`);
-  console.log(`Webhook URL: http://localhost:${PORT}/webhook`);
-  console.log(`Admin Dashboard: http://localhost:${PORT}`);
+  console.log(`Health check: http://0.0.0.0:${PORT}/health`);
+  console.log(`Admin Dashboard: http://0.0.0.0:${PORT}`);
   
-  // Start broadcast scheduler (check every 5 minutes)
-  setInterval(scheduleNextBroadcasts, 5 * 60 * 1000);
-  console.log('Broadcast scheduler started');
+  // Start broadcast scheduler (check every 5 minutes) - with error handling
+  try {
+    setInterval(async () => {
+      try {
+        await scheduleNextBroadcasts();
+      } catch (err) {
+        console.error('Broadcast scheduler error:', err.message);
+      }
+    }, 5 * 60 * 1000);
+    console.log('Broadcast scheduler started');
+  } catch (err) {
+    console.error('Failed to start broadcast scheduler:', err.message);
+  }
 });
