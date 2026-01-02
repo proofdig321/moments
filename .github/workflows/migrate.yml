@@ -1,0 +1,26 @@
+name: Manual Migrations
+
+on:
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Run migrations (requires SUPABASE_DB_URL secret)
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "Missing SUPABASE_DB_URL secret. Set it in repo settings.";
+            exit 1;
+          fi
+          chmod +x ./scripts/apply_migrations.sh
+          ./scripts/apply_migrations.sh "$DB_URL"

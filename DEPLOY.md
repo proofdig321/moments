@@ -42,6 +42,19 @@ npm run deploy:railway
 3. `supabase/enhanced-schema.sql`
 4. `supabase/system-settings.sql`
 
+### Apply RBAC & Campaigns Migrations
+
+You can apply RBAC and campaigns migrations using the helper script or via Supabase SQL Editor.
+
+Using the script (requires `psql` and DB URL):
+
+```bash
+chmod +x ./scripts/apply_migrations.sh
+./scripts/apply_migrations.sh "postgresql://user:pass@host:5432/postgres"
+```
+
+Or use the GitHub Actions manual workflow `Manual Migrations` in `.github/workflows/migrate.yml` (requires `SUPABASE_DB_URL` secret).
+
 ## **Post-Deployment**
 
 1. Configure WhatsApp webhook to your domain
@@ -49,6 +62,20 @@ npm run deploy:railway
 3. Upload logo via Settings tab
 4. Create first moment
 5. Test broadcast functionality
+
+## Sentry / Observability
+
+To enable error monitoring with Sentry set the `SENTRY_DSN` environment variable in your deployment platform. The server will attach user context (when available) and capture errors.
+
+Example env vars to add:
+
+```
+SENTRY_DSN=https://<PUBLIC_KEY>@o0.ingest.sentry.io/0
+ADMIN_CSRF_TOKEN=your_csrf_token
+INTERNAL_WEBHOOK_SECRET=internal-secret-for-n8n
+WEBHOOK_HMAC_SECRET=your_hmac_secret
+ADMIN_ORIGIN=https://your-admin-origin.example
+```
 
 ## **Access Points**
 

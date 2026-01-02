@@ -63,7 +63,22 @@
     },
     {
       "parameters": {
-        "url": "http://localhost:3000/webhook",
+        "url": "={{$env.PROCESSING_ENDPOINT}}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "internalApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Internal-Secret",
+              "value": "={{$env.INTERNAL_WEBHOOK_SECRET}}"
+            }
+          ]
+        },
         "sendBody": true,
         "bodyParameters": {
           "parameters": [

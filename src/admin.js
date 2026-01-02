@@ -1,8 +1,25 @@
 import express from 'express';
 import { supabase } from '../config/supabase.js';
+import { requireRole } from './auth.js';
 import { broadcastMoment, scheduleNextBroadcasts } from './broadcast.js';
 
 const router = express.Router();
+
+// Protect all admin routes: only allow admin and superadmin by default
+router.use(requireRole(['admin', 'superadmin']));
+
+// Simple sanitizers
+const sanitizeString = (s, max=2000) => {
+  if (s === null || s === undefined) return s;
+  let t = String(s).trim();
+  if (t.length > max) t = t.slice(0, max);
+  return t;
+};
+
+const sanitizeArrayOfStrings = (arr) => {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(a => sanitizeString(a, 500)).filter(Boolean);
+};
 
 // Get all moments with pagination and filters
 router.get('/moments', async (req, res) => {
@@ -384,6 +401,224 @@ router.post('/process-scheduled', async (req, res) => {
   try {
     await scheduleNextBroadcasts();
     res.json({ success: true, message: 'Scheduled broadcasts processed' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- Campaign management ---
+// List campaigns with filters
+router.get('/campaigns', async (req, res) => {
+  try {
+    const { page = 1, limit = 20, status, sponsor_id } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = supabase
+      .from('campaigns')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (status) query = query.eq('status', status);
+    if (sponsor_id) query = query.eq('sponsor_id', sponsor_id);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json({ campaigns: data || [], page: parseInt(page), limit: parseInt(limit) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create campaign (editor+)
+router.post('/campaigns', requireRole(['editor','admin','superadmin']), async (req, res) => {
+  try {
+    const {
+      title,
+      content,
+      sponsor_id,
+      budget = 0,
+      target_regions = [],
+      target_categories = [],
+      media_urls = [],
+      scheduled_at
+    } = req.body;
+
+    // sanitize inputs
+    const cleanTitle = sanitizeString(title, 250);
+    const cleanContent = sanitizeString(content, 5000);
+    const cleanSponsor = sponsor_id ? sanitizeString(sponsor_id, 100) : null;
+    const cleanBudget = Number(budget) || 0;
+    const cleanRegions = sanitizeArrayOfStrings(target_regions);
+    const cleanCategories = sanitizeArrayOfStrings(target_categories);
+    const cleanMedia = sanitizeArrayOfStrings(media_urls);
+    const cleanScheduled = scheduled_at ? sanitizeString(scheduled_at, 64) : null;
+
+    if (!cleanTitle || !cleanContent) return res.status(400).json({ error: 'title and content required' });
+
+    const created_by = req.user?.id || null;
+
+    const { data, error } = await supabase
+      .from('campaigns')
+      .insert({ title: cleanTitle, content: cleanContent, sponsor_id: cleanSponsor, budget: cleanBudget, target_regions: cleanRegions, target_categories: cleanCategories, media_urls: cleanMedia, scheduled_at: cleanScheduled, created_by, status: cleanScheduled ? 'scheduled' : 'pending_review' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ campaign: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update campaign (editor+)
+router.put('/campaigns/:id', requireRole(['editor','admin','superadmin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const raw = req.body;
+    const updates = {};
+    if (raw.title) updates.title = sanitizeString(raw.title, 250);
+    if (raw.content) updates.content = sanitizeString(raw.content, 5000);
+    if (raw.sponsor_id) updates.sponsor_id = sanitizeString(raw.sponsor_id, 100);
+    if (raw.budget) updates.budget = Number(raw.budget) || 0;
+    if (raw.target_regions) updates.target_regions = sanitizeArrayOfStrings(raw.target_regions);
+    if (raw.target_categories) updates.target_categories = sanitizeArrayOfStrings(raw.target_categories);
+    if (raw.media_urls) updates.media_urls = sanitizeArrayOfStrings(raw.media_urls);
+    if (raw.scheduled_at) updates.scheduled_at = sanitizeString(raw.scheduled_at, 64);
+
+    const { data, error } = await supabase
+      .from('campaigns')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ campaign: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Approve campaign (admin+)
+router.post('/campaigns/:id/approve', requireRole(['admin','superadmin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('campaigns')
+      .update({ status: 'approved', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ campaign: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Publish campaign => create moment and optionally broadcast
+router.post('/campaigns/:id/publish', requireRole(['admin','superadmin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Get campaign
+    const { data: campaign, error: getErr } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (getErr || !campaign) throw new Error('Campaign not found');
+
+    // Create a moment from campaign
+    const momentRecord = {
+      title: campaign.title,
+      content: campaign.content,
+      region: campaign.target_regions && campaign.target_regions.length ? campaign.target_regions[0] : 'National',
+      category: campaign.target_categories && campaign.target_categories.length ? campaign.target_categories[0] : 'Sponsored',
+      language: 'eng',
+      sponsor_id: campaign.sponsor_id,
+      is_sponsored: true,
+      media_urls: campaign.media_urls,
+      pwa_link: null,
+      scheduled_at: null,
+      status: 'broadcasted',
+      created_by: campaign.created_by
+    };
+
+    const { data: moment, error: insertErr } = await supabase
+      .from('moments')
+      .insert(momentRecord)
+      .select()
+      .single();
+    if (insertErr) throw insertErr;
+
+    // Mark campaign as published
+    await supabase.from('campaigns').update({ status: 'published', updated_at: new Date().toISOString() }).eq('id', id);
+
+    // Trigger broadcast asynchronously
+    try {
+      // lazy import to avoid cycles
+      const { broadcastMoment } = await import('./broadcast.js');
+      broadcastMoment(moment.id).catch(err => console.error('Campaign broadcast error:', err.message));
+    } catch (err) {
+      console.error('Failed to trigger broadcast:', err.message);
+    }
+
+    res.json({ success: true, moment_id: moment.id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+// --- Admin role management (superadmin only) ---
+// List all role mappings
+router.get('/roles', requireRole(['superadmin']), async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('admin_roles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json({ roles: data || [] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create or update a role mapping
+router.post('/roles', requireRole(['superadmin']), async (req, res) => {
+  try {
+    const user_id = sanitizeString(req.body.user_id, 100);
+    const role = sanitizeString(req.body.role, 32);
+    if (!user_id || !role) return res.status(400).json({ error: 'user_id and role required' });
+    const allowed = ['superadmin', 'admin', 'editor', 'viewer'];
+    if (!allowed.includes(role)) return res.status(400).json({ error: 'invalid role' });
+
+    // Upsert mapping
+    const { data, error } = await supabase
+      .from('admin_roles')
+      .upsert({ user_id, role }, { onConflict: 'user_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ mapping: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a role mapping by id
+router.delete('/roles/:id', requireRole(['superadmin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from('admin_roles')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
