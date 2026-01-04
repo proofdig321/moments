@@ -5,8 +5,8 @@ import { broadcastMoment, scheduleNextBroadcasts } from './broadcast.js';
 
 const router = express.Router();
 
-// Protect all admin routes: only allow admin and superadmin by default
-router.use(requireRole(['admin', 'superadmin']));
+// Protect all admin routes: require at least moderator role
+router.use(requireRole(['moderator', 'content_admin', 'superadmin']));
 
 // Simple sanitizers
 const sanitizeString = (s, max=2000) => {
@@ -437,8 +437,8 @@ router.get('/campaigns', async (req, res) => {
   }
 });
 
-// Create campaign (editor+)
-router.post('/campaigns', requireRole(['editor','admin','superadmin']), async (req, res) => {
+// Create campaign (content_admin+)
+router.post('/campaigns', requireRole(['content_admin','superadmin']), async (req, res) => {
   try {
     const {
       title,
@@ -478,8 +478,8 @@ router.post('/campaigns', requireRole(['editor','admin','superadmin']), async (r
   }
 });
 
-// Update campaign (editor+)
-router.put('/campaigns/:id', requireRole(['editor','admin','superadmin']), async (req, res) => {
+// Update campaign (content_admin+)
+router.put('/campaigns/:id', requireRole(['content_admin','superadmin']), async (req, res) => {
   try {
     const { id } = req.params;
     const raw = req.body;
@@ -507,8 +507,8 @@ router.put('/campaigns/:id', requireRole(['editor','admin','superadmin']), async
   }
 });
 
-// Approve campaign (admin+)
-router.post('/campaigns/:id/approve', requireRole(['admin','superadmin']), async (req, res) => {
+// Approve campaign (superadmin only)
+router.post('/campaigns/:id/approve', requireRole(['superadmin']), async (req, res) => {
   try {
     const { id } = req.params;
     const { data, error } = await supabase
@@ -524,8 +524,8 @@ router.post('/campaigns/:id/approve', requireRole(['admin','superadmin']), async
   }
 });
 
-// Publish campaign => create moment and optionally broadcast
-router.post('/campaigns/:id/publish', requireRole(['admin','superadmin']), async (req, res) => {
+// Publish campaign => create moment and optionally broadcast (superadmin only)
+router.post('/campaigns/:id/publish', requireRole(['superadmin']), async (req, res) => {
   try {
     const { id } = req.params;
     // Get campaign
@@ -599,7 +599,7 @@ router.post('/roles', requireRole(['superadmin']), async (req, res) => {
     const user_id = sanitizeString(req.body.user_id, 100);
     const role = sanitizeString(req.body.role, 32);
     if (!user_id || !role) return res.status(400).json({ error: 'user_id and role required' });
-    const allowed = ['superadmin', 'admin', 'editor', 'viewer'];
+    const allowed = ['superadmin', 'content_admin', 'moderator', 'viewer'];
     if (!allowed.includes(role)) return res.status(400).json({ error: 'invalid role' });
 
     // Upsert mapping

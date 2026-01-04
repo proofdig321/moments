@@ -10,7 +10,7 @@ DROP POLICY IF EXISTS "Admin manage settings" ON system_settings;
 
 -- Sponsors table policies
 CREATE POLICY "Super admin full access" ON sponsors
-  FOR ALL USING (check_admin_role('super_admin'));
+  FOR ALL USING (check_admin_role('superadmin'));
 
 CREATE POLICY "Content admin read/write" ON sponsors
   FOR ALL USING (check_admin_role('content_admin'));
@@ -20,7 +20,7 @@ CREATE POLICY "Moderator read only" ON sponsors
 
 -- Moments table policies
 CREATE POLICY "Super admin full access" ON moments
-  FOR ALL USING (check_admin_role('super_admin'));
+  FOR ALL USING (check_admin_role('superadmin'));
 
 CREATE POLICY "Content admin manage moments" ON moments
   FOR ALL USING (check_admin_role('content_admin'));
@@ -37,25 +37,25 @@ CREATE POLICY "Admin view broadcasts" ON broadcasts
   FOR SELECT USING (check_admin_role('content_admin'));
 
 CREATE POLICY "Super admin manage broadcasts" ON broadcasts
-  FOR ALL USING (check_admin_role('super_admin'));
+  FOR ALL USING (check_admin_role('superadmin'));
 
 -- Subscriptions table policies
 CREATE POLICY "Admin view subscriptions" ON subscriptions
   FOR SELECT USING (check_admin_role('content_admin'));
 
 CREATE POLICY "Super admin manage subscriptions" ON subscriptions
-  FOR ALL USING (check_admin_role('super_admin'));
+  FOR ALL USING (check_admin_role('superadmin'));
 
 -- System settings policies
 CREATE POLICY "Super admin manage settings" ON system_settings
-  FOR ALL USING (check_admin_role('super_admin'));
+  FOR ALL USING (check_admin_role('superadmin'));
 
 CREATE POLICY "Content admin read settings" ON system_settings
   FOR SELECT USING (check_admin_role('content_admin'));
 
 -- Admin roles policies
 CREATE POLICY "Super admin manage roles" ON admin_roles
-  FOR ALL USING (check_admin_role('super_admin'));
+  FOR ALL USING (check_admin_role('superadmin'));
 
 CREATE POLICY "Users view own roles" ON admin_roles
   FOR SELECT USING (
@@ -64,7 +64,7 @@ CREATE POLICY "Users view own roles" ON admin_roles
 
 -- Audit log policies
 CREATE POLICY "Super admin view all audit" ON audit_log
-  FOR SELECT USING (check_admin_role('super_admin'));
+  FOR SELECT USING (check_admin_role('superadmin'));
 
 CREATE POLICY "Users view own audit" ON audit_log
   FOR SELECT USING (
@@ -73,7 +73,7 @@ CREATE POLICY "Users view own audit" ON audit_log
 
 -- Webhook tokens policies
 CREATE POLICY "Super admin manage tokens" ON webhook_tokens
-  FOR ALL USING (check_admin_role('super_admin'));
+  FOR ALL USING (check_admin_role('superadmin'));
 
 -- Messages table policies (existing table)
 DO $$
@@ -85,7 +85,7 @@ BEGIN
     
     DROP POLICY IF EXISTS "Super admin manage messages" ON messages;
     CREATE POLICY "Super admin manage messages" ON messages
-      FOR ALL USING (check_admin_role('super_admin'));
+      FOR ALL USING (check_admin_role('superadmin'));
   END IF;
 END $$;
 
@@ -99,7 +99,7 @@ BEGIN
     
     DROP POLICY IF EXISTS "Super admin manage media" ON media;
     CREATE POLICY "Super admin manage media" ON media
-      FOR ALL USING (check_admin_role('super_admin'));
+      FOR ALL USING (check_admin_role('superadmin'));
   END IF;
 END $$;
 

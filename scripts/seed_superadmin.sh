@@ -1,48 +1,94 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Seed Superadmin Script for Unami Foundation Moments
 # Usage:
-#   export DATABASE_URL=postgres://user:pass@host:5432/dbname
 #   export SUPERADMIN_USER_ID=00000000-0000-0000-0000-000000000000
+#   export DATABASE_URL=postgresql://postgres:password@host:5432/dbname
 #   ./scripts/seed_superadmin.sh
-#
-# The script will insert or update an admin_roles mapping for the provided user id.
 
-SQL_FILE_CONTENT="-- Seed a superadmin mapping for Unami Foundation Moments
-INSERT INTO public.admin_roles (user_id, role)
-VALUES ('${SUPERADMIN_USER_ID}', 'superadmin')
-ON CONFLICT (user_id) DO UPDATE SET role = EXCLUDED.role;
-"
+echo "🔐 Seeding Superadmin for Unami Foundation Moments"
+echo "================================================"
 
-DB_URL="${DATABASE_URL:-}" 
-
+# Check required environment variables
 if [ -z "${SUPERADMIN_USER_ID:-}" ]; then
-  echo "ERROR: set SUPERADMIN_USER_ID env var to the target Supabase user UUID"
+  echo "❌ ERROR: SUPERADMIN_USER_ID environment variable is required"
+  echo "   Set it to your Supabase Auth user UUID"
+  echo "   Example: export SUPERADMIN_USER_ID=12345678-1234-1234-1234-123456789012"
   exit 1
 fi
 
-if [ -z "$DB_URL" ]; then
-  echo "No DATABASE_URL provided. Here is the SQL you can paste into Supabase SQL editor:"
-  echo
-  echo "$SQL_FILE_CONTENT"
-  exit 0
+# Validate UUID format
+if ! echo "$SUPERADMIN_USER_ID" | grep -qE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+  echo "❌ ERROR: SUPERADMIN_USER_ID must be a valid UUID format"
+  echo "   Got: $SUPERADMIN_USER_ID"
+  exit 1
 fi
 
-if command -v psql >/dev/null 2>&1; then
-  echo "Applying seed via psql to $DB_URL"
-  echo "$SQL_FILE_CONTENT" | psql "$DB_URL" --set ON_ERROR_STOP=on
-  echo "Seed applied."
-  exit 0
+# SQL to insert/update superadmin role
+SQL_CONTENT="-- Seed superadmin role for Unami Foundation Moments
+INSERT INTO public.admin_roles (user_id, role, created_by)
+VALUES ('${SUPERADMIN_USER_ID}', 'superadmin', '${SUPERADMIN_USER_ID}')
+ON CONFLICT (user_id) DO UPDATE SET 
+  role = EXCLUDED.role,
+  updated_at = NOW();
+
+-- Verify the role was created
+SELECT 
+  user_id,
+  role,
+  created_at,
+  updated_at
+FROM admin_roles 
+WHERE user_id = '${SUPERADMIN_USER_ID}';"
+
+DB_URL="${DATABASE_URL:-}"
+
+echo "👤 User ID: $SUPERADMIN_USER_ID"
+echo "🎭 Role: superadmin"
+echo ""
+
+# Try different methods to execute SQL
+if [ -n "$DB_URL" ]; then
+  echo "🔗 Using DATABASE_URL: ${DB_URL%%@*}@***"
+  
+  # Method 1: Try psql directly
+  if command -v psql >/dev/null 2>&1; then
+    echo "📊 Executing SQL via psql..."
+    if echo "$SQL_CONTENT" | psql "$DB_URL" --set ON_ERROR_STOP=on; then
+      echo "✅ Superadmin role seeded successfully!"
+      exit 0
+    else
+      echo "❌ Failed to execute via psql"
+    fi
+  fi
+  
+  # Method 2: Try Docker postgres
+  if command -v docker >/dev/null 2>&1; then
+    echo "🐳 Trying Docker postgres client..."
+    if echo "$SQL_CONTENT" | docker run --rm -i postgres:15 psql "$DB_URL" -v ON_ERROR_STOP=1; then
+      echo "✅ Superadmin role seeded successfully via Docker!"
+      exit 0
+    else
+      echo "❌ Failed to execute via Docker psql"
+    fi
+  fi
+  
+  echo "❌ Could not execute SQL automatically"
+else
+  echo "ℹ️  No DATABASE_URL provided"
 fi
 
-if command -v docker >/dev/null 2>&1; then
-  echo "psql not found; attempting to run psql inside Docker postgres image as a fallback..."
-  echo "$SQL_FILE_CONTENT" | docker run --rm -i postgres:15 psql "$DB_URL" -v ON_ERROR_STOP=1 && echo "Seed applied via Docker psql." && exit 0 || true
-fi
-
-echo "Could not run psql. Paste this SQL into your Supabase SQL editor:"
-
-echo
-echo "$SQL_FILE_CONTENT"
+echo ""
+echo "📋 Manual Setup Instructions:"
+echo "============================="
+echo "1. Open your Supabase project SQL Editor"
+echo "2. Paste and execute the following SQL:"
+echo ""
+echo "$SQL_CONTENT"
+echo ""
+echo "3. Verify the role was created by checking the SELECT result"
+echo ""
+echo "🔗 Supabase SQL Editor: https://app.supabase.com/project/YOUR_PROJECT/sql"
 
 exit 0
