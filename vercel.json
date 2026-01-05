@@ -9,6 +9,13 @@
       "dest": "/api/index.js"
     },
     {
+      "src": "/admin-dashboard.html",
+      "status": 302,
+      "headers": {
+        "Location": "https://moments-api.unamifoundation.org/admin-dashboard.html"
+      }
+    },
+    {
       "src": "/admin/(.*)",
       "status": 302,
       "headers": {

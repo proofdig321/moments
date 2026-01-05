@@ -50,6 +50,13 @@ export default function handler(req, res) {
     return;
   }
 
+  // Redirect admin dashboard to Railway
+  if (req.url === '/admin-dashboard.html') {
+    res.writeHead(302, { 'Location': 'https://moments-api.unamifoundation.org/admin-dashboard.html' });
+    res.end();
+    return;
+  }
+
   // Redirect admin requests to Railway
   if (req.url.startsWith('/admin')) {
     res.writeHead(302, { 'Location': 'https://moments-api.unamifoundation.org' + req.url });
