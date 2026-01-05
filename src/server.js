@@ -46,7 +46,7 @@ app.use((req, res, next) => {
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=()');
   // Content Security Policy: restrict to same-origin and known CDNs
-  res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data: https:; media-src 'self' https:; script-src 'self'; style-src 'self' 'unsafe-inline';");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data: https:; media-src 'self' https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';");
   next();
 });
 
@@ -96,7 +96,18 @@ app.use(cookieParser());
 
 // serve admin.html with csrf cookie set when ADMIN_CSRF_TOKEN is configured
 app.get('/admin.html', csrfCookieSetter, (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/admin.html'));
+  // Redirect to separate admin domain or show message
+  res.send(`
+    <html>
+      <head><title>Admin Access</title></head>
+      <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+        <h1>🔒 Admin Dashboard</h1>
+        <p>Admin access has been moved to a separate secure domain.</p>
+        <p>Contact your administrator for access.</p>
+        <a href="/" style="color: #2563eb;">← Back to Community App</a>
+      </body>
+    </html>
+  `);
 });
 
 // Mount admin routes with CSRF enforcement for state-changing requests
