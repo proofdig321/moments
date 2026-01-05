@@ -14,7 +14,7 @@
     "test:pwa": "echo '✅ Server running on port 8080. Use Codespaces port forwarding to test PWA features.' && echo 'See PWA_CODESPACES.md for testing guide.'",
     "build": "next build || echo 'Next build skipped'",
     "build:legacy": "echo 'Build complete - Vercel serverless functions ready'",
-    "vercel-build": "echo 'Vercel build complete'",
+    "vercel-build": "echo 'Vercel build complete - serverless functions ready'",
     "deploy:vercel": "vercel --prod",
     "deploy:railway": "railway up",
     "setup:storage": "node scripts/create_storage_bucket.js",

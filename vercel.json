@@ -1,0 +1,47 @@
+{
+  "functions": {
+    "api/index.js": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/index.html",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/admin/(.*)",
+      "status": 302,
+      "headers": {
+        "Location": "https://moments-api.unamifoundation.org/admin/$1"
+      }
+    },
+    {
+      "src": "/webhook(.*)",
+      "status": 302,
+      "headers": {
+        "Location": "https://moments-api.unamifoundation.org/webhook$1"
+      }
+    },
+    {
+      "src": "/health",
+      "status": 302,
+      "headers": {
+        "Location": "https://moments-api.unamifoundation.org/health"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.js"
+    }
+  ],
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
+  }
+}
