@@ -1,16 +1,25 @@
 // Vercel serverless function entry point
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Simple landing page redirect for Vercel
 export default function handler(req, res) {
-  // Serve the landing page for root requests
+  // Serve the proper landing page for root requests
   if (req.url === '/' || req.url === '/index.html') {
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(`
+    try {
+      const landingPath = path.join(__dirname, '../public/landing.html');
+      const landingContent = fs.readFileSync(landingPath, 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(landingContent);
+      return;
+    } catch (error) {
+      // Fallback to inline HTML if file read fails
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(`
 <!DOCTYPE html>
 <html>
 <head>
@@ -46,8 +55,9 @@ export default function handler(req, res) {
     </div>
 </body>
 </html>
-    `);
-    return;
+      `);
+      return;
+    }
   }
 
   // Redirect admin dashboard to Railway
