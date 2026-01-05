@@ -27,8 +27,8 @@ fi
 
 # SQL to insert/update superadmin role
 SQL_CONTENT="-- Seed superadmin role for Unami Foundation Moments
-INSERT INTO public.admin_roles (user_id, role, created_by)
-VALUES ('${SUPERADMIN_USER_ID}', 'superadmin', '${SUPERADMIN_USER_ID}')
+INSERT INTO public.admin_roles (user_id, role)
+VALUES ('${SUPERADMIN_USER_ID}', 'superadmin')
 ON CONFLICT (user_id) DO UPDATE SET 
   role = EXCLUDED.role,
   updated_at = NOW();
