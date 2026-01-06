@@ -3,14 +3,7 @@ const API_BASE = '/admin';
 
 // Get auth token from localStorage
 function getAuthToken() {
-    const token = localStorage.getItem('supabase.auth.token');
-    if (!token) return null;
-    try {
-        const parsed = JSON.parse(token);
-        return parsed.access_token;
-    } catch {
-        return null;
-    }
+    return localStorage.getItem('admin.auth.token');
 }
 
 // API fetch with auth
@@ -828,8 +821,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initialize Supabase and auth UI
-    initSupabase();
+
     const signInBtn = document.getElementById('sign-in');
     const signOutBtn = document.getElementById('sign-out');
 

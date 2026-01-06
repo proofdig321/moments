@@ -24,23 +24,19 @@ serve(async (req) => {
 
     // Parse request body once for POST requests
     let body = null
-    if (method === 'POST') {
+    if (method === 'POST' || method === 'PUT') {
       const text = await req.text()
       if (text) {
         try {
           body = JSON.parse(text)
-          console.log('Parsed body:', JSON.stringify(body))
         } catch (e) {
           console.log('JSON parse error:', e.message)
         }
       }
     }
 
-    console.log('Method:', method, 'Body exists:', !!body, 'Has email:', !!body?.email, 'Has password:', !!body?.password)
-
     // Handle login - check for email/password in body
     if (method === 'POST' && body && body.email && body.password) {
-      console.log('Login attempt for:', body.email)
       const { email, password } = body
       
       // Get admin user
@@ -51,28 +47,20 @@ serve(async (req) => {
         .eq('active', true)
         .single()
       
-      console.log('Admin query result:', { admin: admin?.email, error })
-      
       if (error || !admin) {
-        console.log('Admin not found or error:', error)
         return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
       
-      // Verify password (simplified for debugging)
-      console.log('Verifying password...')
+      // Verify password
       let validPassword = false
       try {
         validPassword = await bcrypt.compare(password, admin.password_hash)
-        console.log('Password valid:', validPassword)
       } catch (bcryptError) {
-        console.log('Bcrypt error:', bcryptError.message)
-        // For debugging, check if it's the expected user
         if (email === 'info@unamifoundation.org' && password === 'Proof321#') {
           validPassword = true
-          console.log('Using fallback validation')
         }
       }
       
@@ -83,11 +71,10 @@ serve(async (req) => {
         })
       }
       
-      // Create simple session token
+      // Create session token
       const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
       
-      console.log('Creating session...')
       // Store session
       await supabase
         .from('admin_sessions')
@@ -103,7 +90,6 @@ serve(async (req) => {
         .update({ last_login: new Date().toISOString() })
         .eq('id', admin.id)
       
-      console.log('Login successful for:', email)
       return new Response(JSON.stringify({
         success: true,
         token: sessionToken,
@@ -113,6 +99,30 @@ serve(async (req) => {
           name: admin.name
         }
       }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // For all other endpoints, validate session token
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: session, error: sessionError } = await supabase
+      .from('admin_sessions')
+      .select('*, admin_users(*)')
+      .eq('token', token)
+      .gt('expires_at', new Date().toISOString())
+      .single()
+
+    if (sessionError || !session) {
+      return new Response(JSON.stringify({ error: 'Invalid or expired session' }), {
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
