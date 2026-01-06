@@ -25,12 +25,14 @@ serve(async (req) => {
     // Parse request body once for POST requests
     let body = null
     if (method === 'POST') {
-      try {
-        body = await req.json()
-        console.log('Parsed body:', JSON.stringify(body))
-      } catch (e) {
-        console.log('Body parse error:', e.message)
-        // Invalid JSON, continue
+      const text = await req.text()
+      if (text) {
+        try {
+          body = JSON.parse(text)
+          console.log('Parsed body:', JSON.stringify(body))
+        } catch (e) {
+          console.log('JSON parse error:', e.message)
+        }
       }
     }
 
@@ -73,7 +75,7 @@ serve(async (req) => {
       
       // Create simple session token
       const sessionToken = crypto.randomUUID()
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
       
       console.log('Creating session...')
       // Store session
