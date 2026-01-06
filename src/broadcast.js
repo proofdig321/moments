@@ -103,42 +103,61 @@ export async function broadcastMoment(momentId) {
   }
 }
 
-// Format WhatsApp message according to playbook rules
+// Enhanced WhatsApp message formatting with sponsor branding
 function formatWhatsAppMessage(moment) {
   let message = '';
   
-  // Sponsored content labeling (playbook requirement)
+  // Sponsored content with enhanced branding
   if (moment.is_sponsored && moment.sponsors?.display_name) {
-    message += `📢 [Sponsored] Moment — ${moment.region}\n`;
+    const sponsorEmoji = getSponsorEmoji(moment.sponsors.tier || 'standard');
+    message += `${sponsorEmoji} [Sponsored] Moment — ${moment.region}\n`;
   } else {
     message += `📢 Moment — ${moment.region}\n`;
   }
   
-  // Main content (must be readable without clicks)
-  message += `${moment.title}\n\n`;
-  message += `${moment.content}\n\n`;
+  // Main content with enhanced formatting
+  message += `${moment.title}\n`;
+  if (moment.content.length > 100) {
+    message += `${moment.content.substring(0, 97)}...\n`;
+  } else {
+    message += `${moment.content}\n`;
+  }
   
-  // Category and region tagging in text
-  message += `🏷️ ${moment.category}`;
+  // Enhanced metadata with sponsor branding
+  message += `\n🏷️ ${moment.category}`;
   if (moment.region !== 'National') {
-    message += ` • ${moment.region}`;
+    message += ` • 📍 ${moment.region}`;
   }
-  message += '\n\n';
   
-  // Sponsor attribution if sponsored
+  // Premium sponsor attribution with branding
   if (moment.is_sponsored && moment.sponsors?.display_name) {
-    message += `Brought to you by ${moment.sponsors.display_name}\n`;
+    const tier = moment.sponsors.tier || 'standard';
+    if (tier === 'premium' || tier === 'enterprise') {
+      message += `\n\n✨ Proudly sponsored by ${moment.sponsors.display_name}`;
+    } else {
+      message += `\n\nBrought to you by ${moment.sponsors.display_name}`;
+    }
   }
   
-  // Optional PWA link enhancement
+  // Enhanced PWA link with tracking
   if (moment.pwa_link) {
-    message += `🌐 More info: ${moment.pwa_link}\n`;
+    const trackingParams = `?utm_source=whatsapp&utm_medium=moment&utm_campaign=${moment.id}`;
+    message += `\n🌐 More: ${moment.pwa_link}${trackingParams}`;
   }
   
-  // Standard footer
-  message += '\n📱 Reply STOP to unsubscribe';
+  // Standard footer with unsubscribe
+  message += '\n\n📱 Reply STOP to unsubscribe';
   
   return message;
+}
+
+// Get sponsor emoji based on tier
+function getSponsorEmoji(tier) {
+  switch (tier) {
+    case 'enterprise': return '👑';
+    case 'premium': return '⭐';
+    default: return '📢';
+  }
 }
 
 // Schedule and process pending broadcasts

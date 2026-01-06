@@ -49,7 +49,23 @@ CREATE TABLE campaign_optimization_rules (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Indexes for performance
+-- Enhanced Sponsors table with logo support
+ALTER TABLE sponsors ADD COLUMN IF NOT EXISTS logo_url TEXT;
+ALTER TABLE sponsors ADD COLUMN IF NOT EXISTS brand_colors JSONB DEFAULT '{"primary": "#2563eb", "secondary": "#64748b"}';
+ALTER TABLE sponsors ADD COLUMN IF NOT EXISTS brand_guidelines TEXT;
+ALTER TABLE sponsors ADD COLUMN IF NOT EXISTS tier TEXT DEFAULT 'standard' CHECK (tier IN ('standard', 'premium', 'enterprise'));
+
+-- Sponsor media assets
+CREATE TABLE IF NOT EXISTS sponsor_assets (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  sponsor_id UUID REFERENCES sponsors(id) ON DELETE CASCADE,
+  asset_type TEXT CHECK (asset_type IN ('logo', 'banner', 'watermark', 'video_intro')),
+  asset_url TEXT NOT NULL,
+  dimensions TEXT, -- e.g., "1200x630"
+  file_size INTEGER,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 CREATE INDEX idx_campaign_budgets_campaign_id ON campaign_budgets(campaign_id);
 CREATE INDEX idx_campaign_metrics_campaign_id ON campaign_metrics(campaign_id);
 CREATE INDEX idx_revenue_events_campaign_id ON revenue_events(campaign_id);
