@@ -773,13 +773,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify(data)
                 });
 
+                const result = await response.json();
                 if (response.ok) {
                     showSuccess(`Moment ${isEdit ? 'updated' : 'created'} successfully!`);
                     resetForm();
                     loadMoments();
                 } else {
-                    const error = await response.json();
-                    showError(error.error || `Failed to ${isEdit ? 'update' : 'create'} moment`);
+                    showError(result.error || `Failed to ${isEdit ? 'update' : 'create'} moment`);
                 }
             } catch (error) {
                 showError(`Failed to ${isEdit ? 'update' : 'create'} moment`);
