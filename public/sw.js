@@ -1,24 +1,19 @@
 const CACHE_NAME = 'unami-moments-v1';
 const STATIC_ASSETS = [
-  '/',
-  '/moments',
-  '/broadcasts',
-  '/settings',
-  '/admin.html',
+  '/login.html',
+  '/admin-dashboard.html',
+  '/moments/index.html',
   '/manifest.json',
   '/logo.png',
-  '/logo.svg',
   '/favicon.ico',
-  '/css/admin.css',
-  '/js/admin.js',
   '/offline.html'
 ];
 
 const API_CACHE_NAME = 'unami-api-v1';
 const API_ENDPOINTS = [
-  '/api/moments',
-  '/api/broadcasts',
-  '/api/analytics'
+  '/admin/moments',
+  '/admin/analytics',
+  '/admin/sponsors'
 ];
 
 self.addEventListener('install', (event) => {
