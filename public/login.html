@@ -139,13 +139,19 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Single Supabase client instance - no multiple initialization
-        const supabaseClient = window.supabase.createClient(
-            'https://arqeiadudzwbmzdhqkit.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFycWVpYWR1ZHp3Ym16ZGhxa2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYyMTg1OTgsImV4cCI6MjA4MTc5NDU5OH0.ZuFeM6U3_-romnhLN2X3ozqWHovifqMQjxRAc3N8r2E'
-        );
+        // Direct Supabase auth without library
+        async function signInWithPassword(email, password) {
+            const response = await fetch('https://arqeiadudzwbmzdhqkit.supabase.co/auth/v1/token?grant_type=password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFycWVpYWR1ZHp3Ym16ZGhxa2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYyMTg1OTgsImV4cCI6MjA4MTc5NDU5OH0.ZuFeM6U3_-romnhLN2X3ozqWHovifqMQjxRAc3N8r2E'
+                },
+                body: JSON.stringify({ email, password })
+            });
+            return await response.json();
+        }
         
         function sanitizeInput(input) {
             if (typeof input !== 'string') return '';
@@ -220,20 +226,18 @@
                         throw new Error('Password must be between 8-128 characters');
                     }
                     
-                    // Sign in with Supabase
-                    const { data, error } = await supabaseClient.auth.signInWithPassword({
-                        email,
-                        password
-                    });
+                    // Sign in with direct API call
+                    const result = await signInWithPassword(email, password);
                     
-                    if (error) {
-                        throw new Error(error.message);
+                    if (result.error) {
+                        throw new Error(result.error.message);
                     }
                     
-                    if (data.session) {
+                    if (result.access_token) {
+                        localStorage.setItem('supabase.auth.token', JSON.stringify(result));
                         window.location.href = '/admin-dashboard.html';
                     } else {
-                        throw new Error('Login failed - no session created');
+                        throw new Error('Login failed - no token received');
                     }
                     
                 } catch (error) {
