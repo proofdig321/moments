@@ -43,6 +43,11 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
+  // Skip non-HTTP requests (chrome-extension, etc.)
+  if (!req.url.startsWith('http')) {
+    return;
+  }
+
   // Skip non-GET requests and requests with auth headers
   if (req.method !== 'GET' || req.headers.get('authorization')) {
     return event.respondWith(
@@ -116,12 +121,17 @@ self.addEventListener('fetch', (event) => {
 
   // Handle static assets with stale-while-revalidate
   if (STATIC_ASSETS.includes(url.pathname) || url.pathname.match(/\.(css|js|png|jpg|svg|ico)$/)) {
+    // Skip chrome-extension and other unsupported schemes
+    if (!req.url.startsWith('http')) {
+      return;
+    }
+    
     event.respondWith(
       caches.open(CACHE_NAME).then(cache => {
         return cache.match(req).then(cached => {
           const fetchPromise = fetch(req).then(response => {
-            if (response.ok) {
-              cache.put(req, response.clone());
+            if (response.ok && req.url.startsWith('http')) {
+              cache.put(req, response.clone()).catch(() => {});
             }
             return response;
           }).catch(() => null);

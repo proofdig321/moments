@@ -146,14 +146,18 @@
         let supabaseClient = null;
         let initAttempts = 0;
         
+        // Fix multiple Supabase client instances
         function initSupabase() {
             initAttempts++;
             console.log('Init attempt:', initAttempts);
             
             if (window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
                 try {
-                    supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
-                    console.log('Supabase client created successfully');
+                    // Only create one instance
+                    if (!supabaseClient) {
+                        supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+                        console.log('Supabase client created successfully');
+                    }
                     return true;
                 } catch (error) {
                     console.error('Supabase client creation failed:', error);
@@ -166,8 +170,8 @@
                     key: !!window.SUPABASE_ANON_KEY
                 });
                 
-                // Retry up to 5 times
-                if (initAttempts < 5) {
+                // Retry up to 3 times only
+                if (initAttempts < 3) {
                     setTimeout(initSupabase, 1000);
                 }
                 return false;
