@@ -201,6 +201,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_messaging_window_trigger ON messages;
 CREATE TRIGGER update_messaging_window_trigger
     AFTER INSERT ON messages
     FOR EACH ROW
@@ -212,21 +213,27 @@ ALTER TABLE whatsapp_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messaging_windows ENABLE ROW LEVEL SECURITY;
 
 -- Admin access policies
+DROP POLICY IF EXISTS "Admin full access to template_messages" ON template_messages;
 CREATE POLICY "Admin full access to template_messages" ON template_messages
     FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
 
+DROP POLICY IF EXISTS "Admin full access to whatsapp_templates" ON whatsapp_templates;
 CREATE POLICY "Admin full access to whatsapp_templates" ON whatsapp_templates
     FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
 
+DROP POLICY IF EXISTS "Admin full access to messaging_windows" ON messaging_windows;
 CREATE POLICY "Admin full access to messaging_windows" ON messaging_windows
     FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
 
 -- Service role access for API operations
+DROP POLICY IF EXISTS "Service role access to template_messages" ON template_messages;
 CREATE POLICY "Service role access to template_messages" ON template_messages
     FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "Service role access to whatsapp_templates" ON whatsapp_templates;
 CREATE POLICY "Service role access to whatsapp_templates" ON whatsapp_templates
     FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
 
+DROP POLICY IF EXISTS "Service role access to messaging_windows" ON messaging_windows;
 CREATE POLICY "Service role access to messaging_windows" ON messaging_windows
     FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
