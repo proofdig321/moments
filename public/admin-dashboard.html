@@ -73,15 +73,26 @@
             .moment-header { flex-direction: column; align-items: stretch; }
             .moment-actions { justify-content: flex-start; }
             .analytics-grid { grid-template-columns: repeat(2, 1fr); }
-            .nav { gap: 0.25rem; }
-            .nav button { padding: 0.5rem; font-size: 0.75rem; }
+            .nav { gap: 0.25rem; flex-wrap: wrap; justify-content: flex-start; padding: 0 0.5rem; }
+            .nav button { padding: 0.4rem 0.5rem; font-size: 0.65rem; min-width: auto; flex: 1; max-width: calc(50% - 0.125rem); }
             .modal-content { margin: 0.5rem; padding: 1rem; }
+            .header h1 { font-size: 0.9rem; }
+            .header h1 img { height: 25px; }
+            .header .container > div { flex-direction: column; gap: 0.5rem; }
+            #auth-area { align-self: flex-end; }
         }
         @media (max-width: 480px) {
             .analytics-grid { grid-template-columns: 1fr; }
             .filters { flex-direction: column; }
             .filter-select { width: 100%; }
+            .nav button { padding: 0.3rem 0.4rem; font-size: 0.6rem; max-width: calc(33.333% - 0.167rem); }
+            .header { padding: 0.5rem 0; }
+            .header h1 { font-size: 0.8rem; }
+            .header h1 img { height: 20px; }
         }
+        .footer { background: #f8fafc; border-top: 1px solid #e5e7eb; padding: 1rem 0; margin-top: 2rem; text-align: center; color: #6b7280; font-size: 0.875rem; }
+        .footer a { color: #2563eb; text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -100,15 +111,12 @@
                 </div>
             </div>
             <div class="nav">
-                <button data-section="dashboard" class="active">Dashboard</button>
-                <button data-section="moments">Moments</button>
-                <button data-section="campaigns">Campaigns</button>
-                <button data-section="sponsors">Sponsors</button>
-                <button data-section="users">Admin Users</button>
-                <button data-section="broadcasts">Broadcasts</button>
-                <button data-section="moderation">Moderation</button>
-                <button data-section="subscribers">Subscribers</button>
-                <button data-section="settings">Settings</button>
+                <button data-section="dashboard" class="active">📊 Dashboard</button>
+                <button data-section="moments">📝 Moments</button>
+                <button data-section="campaigns">📢 Campaigns</button>
+                <button data-section="sponsors">🏢 Sponsors</button>
+                <button data-section="moderation">🛡️ Moderation</button>
+                <button data-section="subscribers">📱 Subscribers</button>
             </div>
         </div>
     </div>
@@ -120,6 +128,12 @@
                 <h2>Analytics Overview</h2>
                 <div id="analytics" class="analytics-grid">
                     <div class="loading">Loading analytics...</div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Data Pipeline Status</h3>
+                <div id="pipeline-status">
+                    <div class="loading">Loading pipeline status...</div>
                 </div>
             </div>
             <div class="card">
@@ -186,15 +200,16 @@
                 <div class="filters">
                     <select class="filter-select" id="campaign-status-filter" data-filter="campaign-status">
                         <option value="">All Status</option>
-                        <option value="pending_review">Pending Review</option>
-                        <option value="approved">Approved</option>
-                        <option value="published">Published</option>
-                        <option value="rejected">Rejected</option>
+                        <option value="draft">Draft</option>
+                        <option value="active">Active</option>
+                        <option value="paused">Paused</option>
+                        <option value="completed">Completed</option>
                     </select>
                     <select class="filter-select" id="campaign-sponsor-filter" data-filter="campaign-sponsor">
                         <option value="">All Sponsors</option>
                     </select>
                 </div>
+                <input type="text" class="search-box" id="campaign-search-box" placeholder="Search campaigns..." data-search="campaigns">
                 <div id="campaigns-list">
                     <div class="loading">Loading campaigns...</div>
                 </div>
@@ -274,6 +289,26 @@
             </div>
         </div>
 
+        <!-- Subscribers Section -->
+        <div id="subscribers" class="section">
+            <div class="card">
+                <h2>Subscriber Management</h2>
+                <div id="subscriber-stats" class="analytics-grid" style="margin-bottom: 1rem;">
+                    <div class="loading">Loading stats...</div>
+                </div>
+                <div class="filters">
+                    <select class="filter-select" id="subscriber-filter" data-filter="subscribers">
+                        <option value="all">All Subscribers</option>
+                        <option value="active">Active Only</option>
+                        <option value="inactive">Opted Out</option>
+                    </select>
+                </div>
+                <div id="subscribers-list">
+                    <div class="loading">Loading subscribers...</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Admin Users Section -->
         <div id="users" class="section">
             <div class="card">
@@ -300,47 +335,30 @@
             </div>
         </div>
 
-        <!-- Broadcasts Section -->
-        <div id="broadcasts" class="section">
-            <div class="card">
-                <h2>Broadcast History</h2>
-                <div id="broadcasts-list">
-                    <div class="loading">Loading broadcasts...</div>
-                </div>
-            </div>
-        </div>
-
         <!-- Moderation Section -->
         <div id="moderation" class="section">
             <div class="card">
                 <h2>Content Moderation</h2>
                 <div class="filters">
                     <select class="filter-select" id="moderation-filter" data-filter="moderation">
-                        <option value="all">All Content</option>
+                        <option value="all">All Messages</option>
                         <option value="flagged">Flagged Only</option>
                         <option value="escalated">Escalated</option>
-                        <option value="reviewed">Reviewed</option>
+                        <option value="high_risk">High Risk</option>
                     </select>
                 </div>
                 <div id="moderation-list">
-                    <div class="loading">Loading flagged content...</div>
+                    <div class="loading">Loading messages...</div>
                 </div>
             </div>
         </div>
 
-        <!-- Subscribers Section -->
-        <div id="subscribers" class="section">
+        <!-- Broadcasts Section -->
+        <div id="broadcasts" class="section">
             <div class="card">
-                <h2>Subscriber Management</h2>
-                <div class="filters">
-                    <select class="filter-select" id="subscriber-filter" data-filter="subscribers">
-                        <option value="all">All Subscribers</option>
-                        <option value="active">Active Only</option>
-                        <option value="inactive">Opted Out</option>
-                    </select>
-                </div>
-                <div id="subscribers-list">
-                    <div class="loading">Loading subscribers...</div>
+                <h2>Broadcast History</h2>
+                <div id="broadcasts-list">
+                    <div class="loading">Loading broadcasts...</div>
                 </div>
             </div>
         </div>
@@ -354,6 +372,13 @@
                     <div class="loading">Loading settings...</div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="container">
+            <p>&copy; 2024 Unami Foundation. Empowering South African communities through accessible WhatsApp-native engagement.</p>
+            <p><a href="mailto:info@unamifoundation.org">info@unamifoundation.org</a> | <a href="https://unamifoundation.org" target="_blank">unamifoundation.org</a></p>
         </div>
     </div>
 
@@ -378,38 +403,76 @@
                 <div class="form-group">
                     <label>Sponsor</label>
                     <select name="sponsor_id" id="campaign-sponsor-select">
-                        <option value="">Select Sponsor</option>
+                        <option value="">No Sponsor</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Budget (ZAR)</label>
-                    <input type="number" name="budget" min="0" step="0.01" placeholder="0.00">
+                    <label>Budget (R)</label>
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6b7280; font-weight: 500;">R</span>
+                        <input type="number" name="budget" min="0" step="100" placeholder="5000" style="padding-left: 2rem;">
+                    </div>
+                    <small style="color: #6b7280;">Campaign budget in South African Rand</small>
                 </div>
                 <div class="form-group">
-                    <label>Target Regions</label>
-                    <div id="campaign-regions" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px;">
-                        <label><input type="checkbox" name="target_regions" value="KZN"> KZN</label>
-                        <label><input type="checkbox" name="target_regions" value="WC"> WC</label>
-                        <label><input type="checkbox" name="target_regions" value="GP"> GP</label>
-                        <label><input type="checkbox" name="target_regions" value="EC"> EC</label>
-                        <label><input type="checkbox" name="target_regions" value="FS"> FS</label>
-                        <label><input type="checkbox" name="target_regions" value="LP"> LP</label>
-                        <label><input type="checkbox" name="target_regions" value="MP"> MP</label>
-                        <label><input type="checkbox" name="target_regions" value="NC"> NC</label>
-                        <label><input type="checkbox" name="target_regions" value="NW"> NW</label>
+                    <label>Primary Region *</label>
+                    <select name="primary_region" required>
+                        <option value="">Select Primary Region</option>
+                        <option value="KZN">KwaZulu-Natal</option>
+                        <option value="WC">Western Cape</option>
+                        <option value="GP">Gauteng</option>
+                        <option value="EC">Eastern Cape</option>
+                        <option value="FS">Free State</option>
+                        <option value="LP">Limpopo</option>
+                        <option value="MP">Mpumalanga</option>
+                        <option value="NC">Northern Cape</option>
+                        <option value="NW">North West</option>
+                        <option value="National">National</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Primary Category *</label>
+                    <select name="primary_category" required>
+                        <option value="">Select Primary Category</option>
+                        <option value="Education">Education</option>
+                        <option value="Safety">Safety</option>
+                        <option value="Culture">Culture</option>
+                        <option value="Opportunity">Opportunity</option>
+                        <option value="Events">Events</option>
+                        <option value="Health">Health</option>
+                        <option value="Technology">Technology</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Additional Regions (optional)</label>
+                    <div style="max-height: 120px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem;">
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="KZN" style="margin-right: 0.5rem;"> KwaZulu-Natal</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="WC" style="margin-right: 0.5rem;"> Western Cape</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="GP" style="margin-right: 0.5rem;"> Gauteng</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="EC" style="margin-right: 0.5rem;"> Eastern Cape</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="FS" style="margin-right: 0.5rem;"> Free State</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="LP" style="margin-right: 0.5rem;"> Limpopo</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="MP" style="margin-right: 0.5rem;"> Mpumalanga</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="NC" style="margin-right: 0.5rem;"> Northern Cape</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="NW" style="margin-right: 0.5rem;"> North West</label>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Target Categories</label>
-                    <div id="campaign-categories" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px;">
-                        <label><input type="checkbox" name="target_categories" value="Education"> Education</label>
-                        <label><input type="checkbox" name="target_categories" value="Safety"> Safety</label>
-                        <label><input type="checkbox" name="target_categories" value="Culture"> Culture</label>
-                        <label><input type="checkbox" name="target_categories" value="Opportunity"> Opportunity</label>
-                        <label><input type="checkbox" name="target_categories" value="Events"> Events</label>
-                        <label><input type="checkbox" name="target_categories" value="Health"> Health</label>
-                        <label><input type="checkbox" name="target_categories" value="Technology"> Technology</label>
+                    <label>Additional Categories (optional)</label>
+                    <div style="max-height: 100px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem;">
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Education" style="margin-right: 0.5rem;"> Education</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Safety" style="margin-right: 0.5rem;"> Safety</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Culture" style="margin-right: 0.5rem;"> Culture</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Opportunity" style="margin-right: 0.5rem;"> Opportunity</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Events" style="margin-right: 0.5rem;"> Events</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Health" style="margin-right: 0.5rem;"> Health</label>
+                        <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Technology" style="margin-right: 0.5rem;"> Technology</label>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label>Campaign Media (optional)</label>
+                    <input type="file" name="campaign_media" id="campaign_media" multiple accept="image/*,video/*,audio/*">
+                    <small style="color: #6b7280;">Upload images, videos, or audio for the campaign</small>
                 </div>
                 <div class="form-group">
                     <label>Scheduled For</label>

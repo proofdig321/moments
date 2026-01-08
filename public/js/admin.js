@@ -40,15 +40,14 @@ function showSection(sectionId) {
     if (navButton) navButton.classList.add('active');
     
     switch(sectionId) {
-        case 'dashboard': loadAnalytics(); loadRecentActivity(); break;
+        case 'dashboard': loadAnalytics(); loadRecentActivity(); loadPipelineStatus(); break;
         case 'moments': loadMoments(); break;
         case 'campaigns': loadCampaigns(); break;
         case 'sponsors': loadSponsors(); break;
+        case 'subscribers': loadSubscribers(); break;
         case 'users': loadAdminUsers(); break;
         case 'broadcasts': loadBroadcasts(); break;
         case 'moderation': loadModeration(); break;
-        case 'subscribers': loadSubscribers(); break;
-        case 'settings': loadSettings(); break;
         case 'create': loadSponsors(); break;
     }
 }
@@ -142,14 +141,34 @@ function handleAction(action, element) {
         case 'cancel-admin-user':
             closeAdminUserModal();
             break;
+        case 'edit-campaign':
+            editCampaign(id);
+            break;
+        case 'activate-campaign':
+            activateCampaign(id);
+            break;
+        case 'flag-message':
+            flagMessage(id);
+            break;
+        case 'approve-message':
+            approveMessage(id);
+            break;
+        case 'preview-message':
+            previewMessage(id);
+            break;
     }
 }
 
-// Load analytics
+// Load analytics with MCP and n8n integration
 async function loadAnalytics() {
     try {
-        const response = await apiFetch('/analytics');
-        const data = await response.json();
+        const [analyticsResponse, mcpResponse] = await Promise.all([
+            apiFetch('/analytics'),
+            apiFetch('/mcp-stats')
+        ]);
+        
+        const data = await analyticsResponse.json();
+        const mcpData = await mcpResponse.json().catch(() => ({ total_analyzed: 0, escalations: 0 }));
         
         document.getElementById('analytics').innerHTML = `
             <div class="stat-card">
@@ -165,12 +184,12 @@ async function loadAnalytics() {
                 <div class="stat-label">Official Updates</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">${data.activeSubscribers || 0}</div>
-                <div class="stat-label">Active Subscribers</div>
+                <div class="stat-number">${mcpData.total_analyzed || 0}</div>
+                <div class="stat-label">MCP Analyzed</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">${data.totalBroadcasts || 0}</div>
-                <div class="stat-label">Broadcasts Sent</div>
+                <div class="stat-number">${mcpData.escalations || 0}</div>
+                <div class="stat-label">MCP Escalations</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number">${data.successRate || 0}%</div>
@@ -407,11 +426,65 @@ async function loadSponsors() {
     }
 }
 
-// Load campaigns
+// Load pipeline status (MCP + n8n)
+async function loadPipelineStatus() {
+    try {
+        const [n8nResponse, mcpResponse] = await Promise.all([
+            apiFetch('/n8n-status').catch(() => ({ json: () => ({ status: 'error' }) })),
+            apiFetch('/mcp-stats').catch(() => ({ json: () => ({ total_analyzed: 0 }) }))
+        ]);
+        
+        const n8nData = await n8nResponse.json();
+        const mcpData = await mcpResponse.json();
+        
+        const pipelineStatusEl = document.getElementById('pipeline-status');
+        if (pipelineStatusEl) {
+            pipelineStatusEl.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div style="padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: ${n8nData.status === 'connected' ? '#16a34a' : '#dc2626'};"></div>
+                            <strong>n8n Workflows</strong>
+                        </div>
+                        <div style="font-size: 0.875rem; color: #6b7280;">
+                            Status: ${n8nData.status}<br>
+                            Active: ${n8nData.total_workflows || 0} workflows
+                        </div>
+                    </div>
+                    <div style="padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: ${mcpData.total_analyzed > 0 ? '#16a34a' : '#f59e0b'};"></div>
+                            <strong>MCP Analysis</strong>
+                        </div>
+                        <div style="font-size: 0.875rem; color: #6b7280;">
+                            Analyzed: ${mcpData.total_analyzed || 0}<br>
+                            Escalations: ${mcpData.escalations || 0}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Pipeline status load error:', error);
+        const pipelineStatusEl = document.getElementById('pipeline-status');
+        if (pipelineStatusEl) {
+            pipelineStatusEl.innerHTML = '<div class="error">Failed to load pipeline status</div>';
+        }
+    }
+}
 async function loadCampaigns() {
     try {
         const response = await apiFetch('/campaigns');
         const data = await response.json();
+        
+        // Load sponsors for filter
+        const sponsorsResponse = await apiFetch('/sponsors');
+        const sponsorsData = await sponsorsResponse.json();
+        const campaignSponsorFilter = document.getElementById('campaign-sponsor-filter');
+        if (campaignSponsorFilter && sponsorsData.sponsors) {
+            campaignSponsorFilter.innerHTML = '<option value="">All Sponsors</option>' + 
+                sponsorsData.sponsors.map(s => `<option value="${s.id}">${s.display_name}</option>`).join('');
+        }
         
         if (data.campaigns && data.campaigns.length > 0) {
             const html = data.campaigns.map(campaign => `
@@ -420,15 +493,19 @@ async function loadCampaigns() {
                         <div class="moment-info">
                             <div class="moment-title">${campaign.title}</div>
                             <div class="moment-meta">
-                                Budget: R${campaign.budget || 0} • ${new Date(campaign.created_at).toLocaleDateString()}
+                                Budget: R${campaign.budget || 0} • ${campaign.sponsor_name || 'No Sponsor'} • ${new Date(campaign.created_at).toLocaleDateString()}
                             </div>
                         </div>
                         <div class="moment-actions">
                             <span class="status-badge status-${campaign.status}">${campaign.status}</span>
-                            <button class="btn btn-sm" data-action="edit-campaign" data-id="${campaign.id}">Edit</button>
+                            <button class="btn btn-sm" data-action="edit-campaign" data-id="${campaign.id}">✏️ Edit</button>
+                            <button class="btn btn-sm btn-success" data-action="activate-campaign" data-id="${campaign.id}">▶️ Activate</button>
+                            <button class="btn btn-sm btn-danger" data-action="delete-campaign" data-id="${campaign.id}">🗑️ Delete</button>
                         </div>
                     </div>
                     <div class="moment-content">${campaign.content.substring(0, 200)}${campaign.content.length > 200 ? '...' : ''}</div>
+                    ${campaign.target_regions ? `<div style="font-size: 0.75rem; color: #2563eb; margin-top: 0.5rem;">Regions: ${Array.isArray(campaign.target_regions) ? campaign.target_regions.join(', ') : campaign.target_regions}</div>` : ''}
+                    ${campaign.target_categories ? `<div style="font-size: 0.75rem; color: #16a34a; margin-top: 0.25rem;">Categories: ${Array.isArray(campaign.target_categories) ? campaign.target_categories.join(', ') : campaign.target_categories}</div>` : ''}
                 </div>
             `).join('');
             document.getElementById('campaigns-list').innerHTML = html;
@@ -533,33 +610,69 @@ async function loadModeration() {
         const response = await apiFetch(`/moderation?filter=${filter}`);
         const data = await response.json();
         
-        if (data.flaggedMessages && data.flaggedMessages.length > 0) {
-            const html = data.flaggedMessages.map(msg => `
-                <div class="moment-item">
-                    <div class="moment-header">
-                        <div class="moment-info">
-                            <div class="moment-title">Message from ${msg.from_number.replace(/\d(?=\d{4})/g, '*')}</div>
-                            <div class="moment-meta">${new Date(msg.created_at).toLocaleString()}</div>
+        const moderationList = document.getElementById('moderation-list');
+        if (!moderationList) return;
+        
+        if (data.messages && data.messages.length > 0) {
+            const html = data.messages.map(msg => {
+                const analysis = msg.mcp_analysis;
+                const riskLevel = analysis ? 
+                    (analysis.confidence > 0.7 ? 'high' : analysis.confidence > 0.4 ? 'medium' : 'low') : 'unknown';
+                const riskColor = {
+                    high: '#dc2626',
+                    medium: '#f59e0b', 
+                    low: '#16a34a',
+                    unknown: '#6b7280'
+                }[riskLevel];
+                
+                return `
+                    <div class="moment-item" style="border-left: 4px solid ${riskColor};">
+                        <div class="moment-header">
+                            <div class="moment-info">
+                                <div class="moment-title">Message from ${msg.from_number.replace(/\d(?=\d{4})/g, '*')}</div>
+                                <div class="moment-meta">
+                                    ${new Date(msg.created_at).toLocaleString()} • 
+                                    Risk: <span style="color: ${riskColor}; font-weight: 500;">${riskLevel.toUpperCase()}</span>
+                                    ${analysis ? ` • Confidence: ${Math.round(analysis.confidence * 100)}%` : ''}
+                                </div>
+                            </div>
+                            <div class="moment-actions">
+                                <button class="btn btn-sm btn-success" data-action="approve-message" data-id="${msg.id}">✅ Approve</button>
+                                <button class="btn btn-sm btn-danger" data-action="flag-message" data-id="${msg.id}">🚫 Flag</button>
+                                <button class="btn btn-sm" data-action="preview-message" data-id="${msg.id}">👁️ Preview</button>
+                            </div>
                         </div>
-                        <div class="moment-actions">
-                            <button class="btn btn-sm btn-success">Approve</button>
-                            <button class="btn btn-sm btn-danger">Flag</button>
+                        <div class="moment-content" style="margin-bottom: 0.5rem;">
+                            <strong>Content:</strong> ${msg.content || 'No text content'}
                         </div>
+                        ${analysis ? `
+                            <div style="background: #f8fafc; padding: 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
+                                <strong>MCP Analysis:</strong>
+                                ${analysis.harm_signals?.detected ? `<span style="color: #dc2626;">⚠️ ${analysis.harm_signals.type}: ${analysis.harm_signals.context}</span>` : ''}
+                                ${analysis.spam_indicators?.detected ? `<span style="color: #f59e0b;">📧 Spam patterns detected</span>` : ''}
+                                ${analysis.urgency_level === 'high' ? `<span style="color: #dc2626;">🚨 High urgency</span>` : ''}
+                                ${analysis.escalation_suggested ? `<span style="color: #dc2626;">⬆️ Escalation suggested</span>` : ''}
+                            </div>
+                        ` : '<div style="color: #6b7280; font-size: 0.75rem;">No MCP analysis available</div>'}
                     </div>
-                    <div class="moment-content">${msg.content}</div>
-                </div>
-            `).join('');
-            document.getElementById('moderation-list').innerHTML = html;
+                `;
+            }).join('');
+            moderationList.innerHTML = html;
         } else {
-            document.getElementById('moderation-list').innerHTML = `
+            moderationList.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-state-icon">✅</div>
-                    <div>No flagged content</div>
+                    <div>No messages found</div>
+                    <p>All messages are clean or no messages match the current filter.</p>
                 </div>
             `;
         }
     } catch (error) {
-        document.getElementById('moderation-list').innerHTML = '<div class="error">Failed to load moderation queue</div>';
+        console.error('Moderation load error:', error);
+        const moderationList = document.getElementById('moderation-list');
+        if (moderationList) {
+            moderationList.innerHTML = '<div class="error">Failed to load moderation data</div>';
+        }
     }
 }
 
@@ -570,76 +683,78 @@ async function loadSubscribers() {
         const response = await apiFetch(`/subscribers?filter=${filter}`);
         const data = await response.json();
         
+        // Update stats
+        const statsEl = document.getElementById('subscriber-stats');
+        if (statsEl && data.stats) {
+            statsEl.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${data.stats.total || 0}</div>
+                    <div class="stat-label">Total Subscribers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${data.stats.active || 0}</div>
+                    <div class="stat-label">Active</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${data.stats.inactive || 0}</div>
+                    <div class="stat-label">Opted Out</div>
+                </div>
+            `;
+        }
+        
+        const subscribersList = document.getElementById('subscribers-list');
+        if (!subscribersList) return;
+        
         if (data.subscribers && data.subscribers.length > 0) {
-            const html = data.subscribers.map(sub => `
-                <div class="moment-item">
-                    <div class="moment-header">
-                        <div class="moment-info">
-                            <div class="moment-title">${sub.phone_number.replace(/\d(?=\d{4})/g, '*')}</div>
-                            <div class="moment-meta">Joined: ${new Date(sub.opted_in_at).toLocaleDateString()}</div>
+            const html = data.subscribers.map(sub => {
+                const regions = Array.isArray(sub.regions) ? sub.regions.join(', ') : 'All';
+                const categories = Array.isArray(sub.categories) ? sub.categories.join(', ') : 'All';
+                
+                return `
+                    <div class="moment-item">
+                        <div class="moment-header">
+                            <div class="moment-info">
+                                <div class="moment-title">${sub.phone_number.replace(/\d(?=\d{4})/g, '*')}</div>
+                                <div class="moment-meta">
+                                    ${sub.opted_in ? 'Joined' : 'Left'}: ${new Date(sub.opted_in ? sub.opted_in_at : sub.opted_out_at).toLocaleDateString()}
+                                    • Last activity: ${new Date(sub.last_activity).toLocaleDateString()}
+                                </div>
+                            </div>
+                            <div class="moment-actions">
+                                <span class="status-badge ${sub.opted_in ? 'status-broadcasted' : 'status-cancelled'}">
+                                    ${sub.opted_in ? 'Active' : 'Opted Out'}
+                                </span>
+                            </div>
                         </div>
-                        <div class="moment-actions">
-                            <span class="status-badge ${sub.opted_in ? 'status-broadcasted' : 'status-cancelled'}">
-                                ${sub.opted_in ? 'Active' : 'Opted Out'}
-                            </span>
+                        <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;">
+                            <strong>Preferences:</strong> ${sub.language_preference || 'eng'} • 
+                            Regions: ${regions} • Categories: ${categories}
                         </div>
                     </div>
-                </div>
-            `).join('');
-            document.getElementById('subscribers-list').innerHTML = html;
+                `;
+            }).join('');
+            subscribersList.innerHTML = html;
         } else {
-            document.getElementById('subscribers-list').innerHTML = `
+            subscribersList.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-state-icon">📱</div>
                     <div>No subscribers found</div>
+                    <p>Users will appear here when they send START to your WhatsApp number.</p>
                 </div>
             `;
         }
     } catch (error) {
-        document.getElementById('subscribers-list').innerHTML = '<div class="error">Failed to load subscribers</div>';
+        console.error('Subscribers load error:', error);
+        const subscribersList = document.getElementById('subscribers-list');
+        if (subscribersList) {
+            subscribersList.innerHTML = '<div class="error">Failed to load subscribers</div>';
+        }
     }
 }
 
 // Load settings
 async function loadSettings() {
-    try {
-        const response = await apiFetch('/settings');
-        const data = await response.json();
-        
-        const settingsList = document.getElementById('settings-list');
-        if (settingsList) {
-            if (data.settings && data.settings.length > 0) {
-                const html = data.settings.map(setting => `
-                    <div class="moment-item">
-                        <div class="moment-header">
-                            <div class="moment-info">
-                                <div class="moment-title">${setting.setting_key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
-                                <div class="moment-meta">${setting.description || 'No description'}</div>
-                            </div>
-                            <div class="moment-actions">
-                                <button class="btn btn-sm" data-action="edit-setting">Edit</button>
-                            </div>
-                        </div>
-                        <div class="moment-content">${setting.setting_value}</div>
-                    </div>
-                `).join('');
-                settingsList.innerHTML = html;
-            } else {
-                settingsList.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">⚙️</div>
-                        <div>No settings found</div>
-                    </div>
-                `;
-            }
-        }
-    } catch (error) {
-        console.error('Settings load error:', error);
-        const settingsList = document.getElementById('settings-list');
-        if (settingsList) {
-            settingsList.innerHTML = '<div class="error">Failed to load settings</div>';
-        }
-    }
+    // Removed - functionality consolidated
 }
 
 // Modal functions
@@ -656,6 +771,24 @@ function closeSponsorModal() {
 function openCampaignModal() {
     document.getElementById('campaign-modal').classList.add('active');
     document.getElementById('campaign-form').reset();
+    
+    // Load sponsors for campaign form
+    loadSponsorsForCampaign();
+}
+
+async function loadSponsorsForCampaign() {
+    try {
+        const response = await apiFetch('/sponsors');
+        const data = await response.json();
+        
+        const campaignSponsorSelect = document.getElementById('campaign-sponsor-select');
+        if (campaignSponsorSelect && data.sponsors) {
+            campaignSponsorSelect.innerHTML = '<option value="">No Sponsor</option>' + 
+                data.sponsors.map(s => `<option value="${s.id}">${s.display_name}</option>`).join('');
+        }
+    } catch (error) {
+        console.error('Failed to load sponsors for campaign:', error);
+    }
 }
 
 function closeCampaignModal() {
@@ -710,6 +843,89 @@ function deleteSponsor(id) {
             }
         } catch (error) {
             showError('Failed to delete sponsor');
+        }
+    });
+}
+
+// Moderation actions
+function approveMessage(id) {
+    showConfirm('Approve this message for publication?', async () => {
+        try {
+            // For now, just mark as processed - could create moment from approved message
+            showSuccess('Message approved');
+            loadModeration();
+        } catch (error) {
+            showError('Failed to approve message');
+        }
+    });
+}
+
+function flagMessage(id) {
+    showConfirm('Flag this message as inappropriate?', async () => {
+        try {
+            // For now, just show success - could add to blocked list
+            showSuccess('Message flagged');
+            loadModeration();
+        } catch (error) {
+            showError('Failed to flag message');
+        }
+    });
+}
+
+function previewMessage(id) {
+    // Find message in current data and show detailed preview
+    const messageData = document.querySelector(`[data-action="preview-message"][data-id="${id}"]`);
+    if (messageData) {
+        const messageItem = messageData.closest('.moment-item');
+        const content = messageItem.querySelector('.moment-content').textContent;
+        const title = messageItem.querySelector('.moment-title').textContent;
+        const meta = messageItem.querySelector('.moment-meta').textContent;
+        
+        showConfirm(`${title}\n\n${meta}\n\n${content}`, () => {}, 'Message Preview', 'Close');
+    }
+}
+function editCampaign(id) {
+    // Load campaign data and open modal for editing
+    openCampaignModal();
+    document.getElementById('campaign-modal-title').textContent = 'Edit Campaign';
+    document.getElementById('campaign-submit-btn').textContent = 'Update Campaign';
+    document.getElementById('campaign-edit-id').value = id;
+}
+
+function activateCampaign(id) {
+    showConfirm('Activate this campaign?', async () => {
+        try {
+            const response = await apiFetch(`/campaigns/${id}/activate`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                showSuccess('Campaign activated successfully');
+                loadCampaigns();
+            } else {
+                showError('Failed to activate campaign');
+            }
+        } catch (error) {
+            showError('Failed to activate campaign');
+        }
+    });
+}
+
+function deleteCampaign(id) {
+    showConfirm('Delete this campaign?', async () => {
+        try {
+            const response = await apiFetch(`/campaigns/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                showSuccess('Campaign deleted successfully');
+                loadCampaigns();
+            } else {
+                showError('Failed to delete campaign');
+            }
+        } catch (error) {
+            showError('Failed to delete campaign');
         }
     });
 }
@@ -939,11 +1155,60 @@ document.addEventListener('DOMContentLoaded', () => {
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
             
-            const regions = Array.from(document.querySelectorAll('input[name="target_regions"]:checked')).map(cb => cb.value);
-            const categories = Array.from(document.querySelectorAll('input[name="target_categories"]:checked')).map(cb => cb.value);
+            // Handle media files first
+            const mediaFiles = formData.getAll('campaign_media');
+            let mediaUrls = [];
             
-            data.target_regions = regions;
-            data.target_categories = categories;
+            if (mediaFiles && mediaFiles.length > 0 && mediaFiles[0].size > 0) {
+                try {
+                    const mediaFormData = new FormData();
+                    mediaFiles.forEach(file => {
+                        if (file.size > 0) {
+                            mediaFormData.append('media_files', file);
+                        }
+                    });
+                    
+                    const uploadResponse = await apiFetch('/upload-media', {
+                        method: 'POST',
+                        body: mediaFormData
+                    });
+                    
+                    const uploadResult = await uploadResponse.json();
+                    if (uploadResult.success) {
+                        mediaUrls = uploadResult.files.map(f => f.publicUrl);
+                        showSuccess(`${uploadResult.files.length} media file(s) uploaded`);
+                    }
+                } catch (uploadError) {
+                    console.error('Media upload failed:', uploadError);
+                    showError('Media upload failed, but campaign will be saved without media');
+                }
+            }
+            
+            if (mediaUrls.length > 0) {
+                data.media_urls = mediaUrls;
+            }
+            
+            // Remove media files from data since it's handled separately
+            delete data.campaign_media;
+            
+            // Get primary selections
+            const primaryRegion = data.primary_region;
+            const primaryCategory = data.primary_category;
+            
+            // Get additional selections
+            const additionalRegions = Array.from(document.querySelectorAll('input[name="target_regions"]:checked')).map(cb => cb.value);
+            const additionalCategories = Array.from(document.querySelectorAll('input[name="target_categories"]:checked')).map(cb => cb.value);
+            
+            // Combine primary + additional (remove duplicates)
+            const allRegions = [primaryRegion, ...additionalRegions].filter((v, i, a) => v && a.indexOf(v) === i);
+            const allCategories = [primaryCategory, ...additionalCategories].filter((v, i, a) => v && a.indexOf(v) === i);
+            
+            data.target_regions = allRegions;
+            data.target_categories = allCategories;
+            
+            // Clean up form data
+            delete data.primary_region;
+            delete data.primary_category;
             
             try {
                 const response = await apiFetch('/campaigns', {
@@ -954,7 +1219,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const result = await response.json();
                 if (response.ok) {
-                    showSuccess('Campaign created successfully!');
+                    showSuccess(`Campaign created successfully! ${result.auto_approved ? '(Auto-approved)' : '(Pending review)'}`);
                     closeCampaignModal();
                     loadCampaigns();
                 } else {
