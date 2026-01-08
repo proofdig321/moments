@@ -212,6 +212,43 @@ app.post('/admin/campaigns', authenticateAdmin, (req, res) => {
   res.json({ success: true, id: 'campaign_' + Date.now() });
 });
 
+// Admin users endpoint
+app.get('/admin/admin-users', authenticateAdmin, (req, res) => {
+  res.json({
+    users: []
+  });
+});
+
+// Create admin user endpoint
+app.post('/admin/admin-users', authenticateAdmin, (req, res) => {
+  res.json({ success: true, id: 'user_' + Date.now() });
+});
+
+// Update moment endpoint
+app.put('/admin/moments/:id', authenticateAdmin, (req, res) => {
+  res.json({ success: true, id: req.params.id });
+});
+
+// Delete moment endpoint
+app.delete('/admin/moments/:id', authenticateAdmin, (req, res) => {
+  res.json({ success: true });
+});
+
+// Broadcast moment endpoint
+app.post('/admin/moments/:id/broadcast', authenticateAdmin, (req, res) => {
+  res.json({ success: true, broadcast_id: 'broadcast_' + Date.now() });
+});
+
+// Update sponsor endpoint
+app.put('/admin/sponsors/:id', authenticateAdmin, (req, res) => {
+  res.json({ success: true, id: req.params.id });
+});
+
+// Delete sponsor endpoint
+app.delete('/admin/sponsors/:id', authenticateAdmin, (req, res) => {
+  res.json({ success: true });
+});
+
 // Error handling
 app.use((error, req, res, next) => {
   console.error('Server error:', error.message);
