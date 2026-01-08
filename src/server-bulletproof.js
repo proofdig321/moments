@@ -707,7 +707,6 @@ app.post('/admin/campaigns', authenticateAdmin, async (req, res) => {
         scheduled_at: scheduled_at || null,
         media_urls: media_urls || [],
         status: autoApprove ? 'approved' : 'pending_review',
-        risk_score: riskScore,
         created_by: 'admin'
       })
       .select()
@@ -723,7 +722,6 @@ app.post('/admin/campaigns', authenticateAdmin, async (req, res) => {
       id: data.id,
       message: `Campaign ${autoApprove ? 'created and approved' : 'created - pending review'}`,
       auto_approved: autoApprove,
-      risk_score: riskScore,
       data
     });
     
