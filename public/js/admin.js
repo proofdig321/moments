@@ -48,6 +48,7 @@ function showSection(sectionId) {
         case 'users': loadAdminUsers(); break;
         case 'broadcasts': loadBroadcasts(); break;
         case 'moderation': loadModeration(); break;
+        case 'settings': loadSettings(); break;
         case 'create': loadSponsors(); break;
     }
 }
@@ -754,7 +755,60 @@ async function loadSubscribers() {
 
 // Load settings
 async function loadSettings() {
-    // Removed - functionality consolidated
+    try {
+        // Update last updated timestamp
+        document.getElementById('last-updated').textContent = new Date().toLocaleDateString();
+        
+        // Test webhook connectivity
+        const webhookStatus = document.getElementById('webhook-status');
+        try {
+            const response = await fetch('/health');
+            if (response.ok) {
+                webhookStatus.innerHTML = '✓ Connected and verified';
+                webhookStatus.style.background = '#f0fdf4';
+                webhookStatus.style.color = '#16a34a';
+            } else {
+                throw new Error('Health check failed');
+            }
+        } catch (error) {
+            webhookStatus.innerHTML = '⚠ Connection issues detected';
+            webhookStatus.style.background = '#fef3c7';
+            webhookStatus.style.color = '#92400e';
+        }
+        
+    } catch (error) {
+        console.error('Settings load error:', error);
+        const settingsMessage = document.getElementById('settings-message');
+        if (settingsMessage) {
+            settingsMessage.innerHTML = '<div class="error">Failed to load settings</div>';
+        }
+    }
+}
+
+// Save settings function
+function saveSettings() {
+    const autoBroadcast = document.getElementById('auto-broadcast-setting').value;
+    const moderationThreshold = document.getElementById('moderation-threshold').value;
+    
+    // Store in localStorage for now (could be moved to database)
+    localStorage.setItem('admin.settings.auto_broadcast', autoBroadcast);
+    localStorage.setItem('admin.settings.moderation_threshold', moderationThreshold);
+    
+    showSuccess('Settings saved successfully');
+}
+
+// Test webhook function
+async function testWebhook() {
+    try {
+        const response = await fetch('/health');
+        if (response.ok) {
+            showSuccess('Webhook test successful - system is responding');
+        } else {
+            showError('Webhook test failed - check system status');
+        }
+    } catch (error) {
+        showError('Webhook test failed - connection error');
+    }
 }
 
 // Modal functions

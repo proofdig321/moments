@@ -71,6 +71,15 @@
         .footer-section a:hover { color: white; }
         .footer-bottom { border-top: 1px solid #374151; padding-top: 30px; text-align: center; color: #9ca3af; }
         
+        /* Navigation */
+        .nav { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .nav-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        .nav-logo { font-size: 1.5rem; font-weight: bold; color: #2563eb; text-decoration: none; }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a { text-decoration: none; color: #374151; font-weight: 500; transition: color 0.2s; }
+        .nav-links a:hover { color: #2563eb; }
+        .nav-toggle { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+        
         /* Responsive */
         @media (max-width: 768px) {
             .container { padding: 0 15px; }
@@ -79,10 +88,28 @@
             .features, .stats, .how-it-works, .regions, .whatsapp-cta { padding: 60px 0; }
             .footer { padding: 40px 0 20px; }
             .footer-content { text-align: center; }
+            .nav-container { padding: 0 15px; }
+            .nav-links { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; flex-direction: column; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .nav-links.active { display: flex; }
+            .nav-toggle { display: block; }
         }
     </style>
 </head>
 <body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">🌍 Unami Moments</a>
+            <div class="nav-links" id="nav-links">
+                <a href="/">Home</a>
+                <a href="/moments">Community</a>
+                <a href="https://wa.me/27658295041?text=START" target="_blank">Join WhatsApp</a>
+                <a href="/admin-dashboard.html">Admin</a>
+            </div>
+            <button class="nav-toggle" id="nav-toggle">☰</button>
+        </div>
+    </nav>
+
     <!-- Header -->
     <section class="header">
         <div class="container">
@@ -290,10 +317,22 @@
             });
         }
         
+        // Mobile navigation toggle
+        document.getElementById('nav-toggle').addEventListener('click', () => {
+            document.getElementById('nav-links').classList.toggle('active');
+        });
+        
         // Load stats and animate on page load
         document.addEventListener('DOMContentLoaded', () => {
             loadStats();
             setTimeout(animateNumbers, 1000);
+        });
+        
+        // Close mobile nav when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.nav')) {
+                document.getElementById('nav-links').classList.remove('active');
+            }
         });
     </script>
 </body>
