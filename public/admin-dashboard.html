@@ -423,6 +423,16 @@
                     <div class="form-group">
                         <label>Media files (optional)</label>
                         <input type="file" name="media_files" id="media_files" multiple accept="image/*,video/*,audio/*">
+                        <div id="media-preview" style="display: none; margin-top: 0.5rem; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 0.375rem; background: #f8fafc;">
+                            <div style="font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem;">Selected Files:</div>
+                            <div id="media-preview-list"></div>
+                            <div id="upload-progress" style="display: none; margin-top: 0.5rem;">
+                                <div style="background: #e5e7eb; border-radius: 0.25rem; overflow: hidden;">
+                                    <div id="upload-progress-bar" style="background: #2563eb; height: 4px; width: 0%; transition: width 0.3s;"></div>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Uploading files...</div>
+                            </div>
+                        </div>
                         <small style="color: #6b7280;">Uploaded files will be stored and included in the Moment.</small>
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
@@ -749,6 +759,19 @@
                     </div>
                 </div>
                 
+                <div class="card" style="margin-top: 1rem;">
+                    <h3>Organization Settings</h3>
+                    <div class="form-group">
+                        <label>Organization Logo</label>
+                        <input type="file" id="logo-upload" accept="image/*">
+                        <div id="logo-preview" style="margin-top: 0.5rem; display: none;">
+                            <img id="logo-preview-img" style="max-width: 200px; max-height: 100px; border-radius: 0.375rem; border: 1px solid #e5e7eb;">
+                        </div>
+                        <small style="color: #6b7280;">Upload organization logo (recommended: 200x100px)</small>
+                    </div>
+                    <button class="btn" onclick="uploadLogo()">Update Logo</button>
+                </div>
+                
                 <div style="margin-top: 1rem;">
                     <button class="btn" onclick="saveSettings()">Save Settings</button>
                     <button class="btn btn-secondary" onclick="testWebhook()" style="margin-left: 0.5rem;">Test Webhook</button>
@@ -1002,6 +1025,52 @@
             notification.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1001; padding: 1rem; border-radius: 0.5rem;';
             document.body.appendChild(notification);
             setTimeout(() => notification.remove(), 3000);
+        }
+        
+        async function uploadLogo() {
+            const fileInput = document.getElementById('logo-upload');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a logo file first');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('media_files', file);
+            
+            try {
+                const response = await fetch('/admin/upload-media', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    localStorage.setItem('admin.settings.logo_url', result.files[0].publicUrl);
+                    document.getElementById('logo-preview-img').src = result.files[0].publicUrl;
+                    document.getElementById('logo-preview').style.display = 'block';
+                    
+                    const notification = document.createElement('div');
+                    notification.className = 'success';
+                    notification.textContent = 'Logo uploaded successfully';
+                    notification.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1001; padding: 1rem; border-radius: 0.5rem;';
+                    document.body.appendChild(notification);
+                    setTimeout(() => notification.remove(), 3000);
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+            } catch (error) {
+                const notification = document.createElement('div');
+                notification.className = 'error';
+                notification.textContent = 'Logo upload failed: ' + error.message;
+                notification.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1001; padding: 1rem; border-radius: 0.5rem;';
+                document.body.appendChild(notification);
+                setTimeout(() => notification.remove(), 3000);
+            }
         }
         
         async function testWebhook() {

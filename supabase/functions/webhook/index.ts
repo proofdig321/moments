@@ -234,8 +234,7 @@ serve(async (req) => {
                       raw_content: content,
                       region: 'National',
                       category: 'Community',
-                      status: 'broadcasted',
-                      broadcasted_at: new Date().toISOString(),
+                      status: 'draft',
                       created_by: 'community',
                       content_source: 'community',
                       is_sponsored: false,
@@ -247,7 +246,58 @@ serve(async (req) => {
                   if (!momentError && moment) {
                     console.log('Community moment created:', moment.title)
                     
-                    const ackMsg = `📝 Thank you for sharing.\n\nYour message has been noted and shared for community awareness.\n\n🌐 View: moments.unamifoundation.org`
+                    // Auto-broadcast community moments
+                    const { data: subscribers } = await supabase
+                      .from('subscriptions')
+                      .select('phone_number')
+                      .eq('opted_in', true)
+                    
+                    if (subscribers && subscribers.length > 0) {
+                      // Create broadcast record
+                      const { data: broadcast } = await supabase
+                        .from('broadcasts')
+                        .insert({
+                          moment_id: moment.id,
+                          recipient_count: subscribers.length,
+                          status: 'processing',
+                          broadcast_started_at: new Date().toISOString()
+                        })
+                        .select()
+                        .single()
+                      
+                      // Update moment to broadcasted
+                      await supabase
+                        .from('moments')
+                        .update({ 
+                          status: 'broadcasted',
+                          broadcasted_at: new Date().toISOString()
+                        })
+                        .eq('id', moment.id)
+                      
+                      // Broadcast to subscribers
+                      const broadcastMsg = `📢 Community Update\n\n${moment.title}\n\n${moment.content}\n\n🌐 More: moments.unamifoundation.org`
+                      
+                      let successCount = 0
+                      for (const sub of subscribers) {
+                        const sent = await sendWhatsAppMessage(sub.phone_number, broadcastMsg)
+                        if (sent) successCount++
+                        // Rate limit: 1 message per second
+                        await new Promise(resolve => setTimeout(resolve, 1000))
+                      }
+                      
+                      // Update broadcast results
+                      await supabase
+                        .from('broadcasts')
+                        .update({
+                          status: 'completed',
+                          success_count: successCount,
+                          failure_count: subscribers.length - successCount,
+                          broadcast_completed_at: new Date().toISOString()
+                        })
+                        .eq('id', broadcast.id)
+                    }
+                    
+                    const ackMsg = `📝 Thank you for sharing.\n\nYour message has been shared with the community.\n\n🌐 View: moments.unamifoundation.org`
                     await sendWhatsAppMessage(message.from, ackMsg)
                   }
                 } else {

@@ -9,7 +9,6 @@
 - **Supabase** - Database, media storage, real-time features
 - **MCP Advisory System** - Content moderation and intelligence
 - **PWA Admin Dashboard** - Content management interface
-- **Railway API** - Webhook processing and broadcast system
 - **n8n Workflows** - Automation and orchestration
 
 ### Agent Roles

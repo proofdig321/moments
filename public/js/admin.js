@@ -1303,8 +1303,76 @@ const spinnerStyle = document.createElement('style');
 spinnerStyle.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
 document.head.appendChild(spinnerStyle);
 
+// File upload preview function
+function handleFilePreview(event) {
+    const files = event.target.files;
+    const preview = document.getElementById('media-preview');
+    const previewList = document.getElementById('media-preview-list');
+    
+    if (files.length === 0) {
+        preview.style.display = 'none';
+        return;
+    }
+    
+    preview.style.display = 'block';
+    previewList.innerHTML = '';
+    
+    Array.from(files).forEach((file, index) => {
+        const fileItem = document.createElement('div');
+        fileItem.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; border-bottom: 1px solid #e5e7eb;';
+        
+        const fileIcon = getFileIcon(file.type);
+        const fileSize = formatFileSize(file.size);
+        
+        fileItem.innerHTML = `
+            <span style="font-size: 1.25rem;">${fileIcon}</span>
+            <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 0.875rem; font-weight: 500; truncate;">${file.name}</div>
+                <div style="font-size: 0.75rem; color: #6b7280;">${fileSize} • ${file.type}</div>
+            </div>
+            <button type="button" onclick="removeFile(${index})" style="background: none; border: none; color: #dc2626; cursor: pointer; padding: 0.25rem;">✕</button>
+        `;
+        
+        previewList.appendChild(fileItem);
+    });
+}
+
+function getFileIcon(mimeType) {
+    if (mimeType.startsWith('image/')) return '🖼️';
+    if (mimeType.startsWith('video/')) return '🎥';
+    if (mimeType.startsWith('audio/')) return '🎵';
+    return '📄';
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function removeFile(index) {
+    const input = document.getElementById('media_files');
+    const dt = new DataTransfer();
+    const files = Array.from(input.files);
+    
+    files.forEach((file, i) => {
+        if (i !== index) dt.items.add(file);
+    });
+    
+    input.files = dt.files;
+    handleFilePreview({ target: input });
+}
+
 // Form submission handlers
 document.addEventListener('DOMContentLoaded', () => {
+    // File upload preview functionality
+    const mediaFilesInput = document.getElementById('media_files');
+    if (mediaFilesInput) {
+        mediaFilesInput.addEventListener('change', handleFilePreview);
+    }
+    
     const createForm = document.getElementById('create-form');
     if (createForm) {
         createForm.addEventListener('submit', async (e) => {
@@ -1331,19 +1399,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                     
+                    // Show upload progress
+                    const progressEl = document.getElementById('upload-progress');
+                    const progressBar = document.getElementById('upload-progress-bar');
+                    if (progressEl && progressBar) {
+                        progressEl.style.display = 'block';
+                        progressBar.style.width = '10%';
+                    }
+                    
                     const uploadResponse = await apiFetch('/upload-media', {
                         method: 'POST',
                         body: mediaFormData
                     });
                     
+                    if (progressBar) progressBar.style.width = '90%';
+                    
                     const uploadResult = await uploadResponse.json();
                     if (uploadResult.success) {
                         mediaUrls = uploadResult.files.map(f => f.publicUrl);
                         showSuccess(`${uploadResult.files.length} media file(s) uploaded`);
+                        if (progressBar) progressBar.style.width = '100%';
                     }
+                    
+                    // Hide progress after delay
+                    setTimeout(() => {
+                        if (progressEl) progressEl.style.display = 'none';
+                    }, 1000);
                 } catch (uploadError) {
                     console.error('Media upload failed:', uploadError);
                     showError('Media upload failed, but moment will be saved without media');
+                    const progressEl = document.getElementById('upload-progress');
+                    if (progressEl) progressEl.style.display = 'none';
                 }
             }
             
