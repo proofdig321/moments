@@ -1,5 +1,5 @@
 // Direct API calls without Supabase library
-const API_BASE = 'https://moments-api-production.up.railway.app/admin';
+const API_BASE = window.location.origin + '/admin';
 
 // Get auth token from localStorage
 function getAuthToken() {
@@ -172,13 +172,8 @@ function handleAction(action, element) {
 // Load analytics with MCP and n8n integration
 async function loadAnalytics() {
     try {
-        const [analyticsResponse, mcpResponse] = await Promise.all([
-            apiFetch('/analytics'),
-            apiFetch('/mcp-stats')
-        ]);
-        
+        const analyticsResponse = await apiFetch('/analytics');
         const data = await analyticsResponse.json();
-        const mcpData = await mcpResponse.json().catch(() => ({ total_analyzed: 0, escalations: 0 }));
         
         document.getElementById('analytics').innerHTML = `
             <div class="stat-card">
@@ -194,12 +189,12 @@ async function loadAnalytics() {
                 <div class="stat-label">Official Updates</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">${mcpData.total_analyzed || 0}</div>
-                <div class="stat-label">MCP Analyzed</div>
+                <div class="stat-number">${data.activeSubscribers || 0}</div>
+                <div class="stat-label">Active Subscribers</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">${mcpData.escalations || 0}</div>
-                <div class="stat-label">MCP Escalations</div>
+                <div class="stat-number">${data.totalBroadcasts || 0}</div>
+                <div class="stat-label">Total Broadcasts</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number">${data.successRate || 0}%</div>
@@ -525,17 +520,14 @@ async function loadPipelineStatus() {
         // Show loading state
         pipelineStatusEl.innerHTML = '<div class="loading">Checking pipeline status...</div>';
         
-        const [healthResponse, mcpResponse, broadcastResponse] = await Promise.all([
-            fetch('/health').catch(() => ({ ok: false, status: 'error' })),
-            apiFetch('/mcp-stats').catch(() => ({ json: () => ({ total_analyzed: 0, status: 'unknown' }) })),
+        const [healthResponse, broadcastResponse] = await Promise.all([
+            fetch(window.location.origin + '/health').catch(() => ({ ok: false, status: 'error' })),
             apiFetch('/broadcasts?limit=1').catch(() => ({ json: () => ({ broadcasts: [] }) }))
         ]);
         
-        const mcpData = await mcpResponse.json().catch(() => ({ total_analyzed: 0, status: 'unknown' }));
         const broadcastData = await broadcastResponse.json().catch(() => ({ broadcasts: [] }));
         
         const systemHealth = healthResponse.ok ? 'connected' : 'error';
-        const mcpStatus = mcpData.total_analyzed > 0 ? 'active' : 'inactive';
         const lastBroadcast = broadcastData.broadcasts?.[0];
         
         pipelineStatusEl.innerHTML = `
@@ -548,16 +540,6 @@ async function loadPipelineStatus() {
                     <div style="font-size: 0.875rem; color: #6b7280;">
                         API: ${systemHealth}<br>
                         WhatsApp: ${systemHealth === 'connected' ? 'Connected' : 'Disconnected'}
-                    </div>
-                </div>
-                <div style="padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                        <div style="width: 8px; height: 8px; border-radius: 50%; background: ${mcpStatus === 'active' ? '#16a34a' : '#f59e0b'};"></div>
-                        <strong>MCP Analysis</strong>
-                    </div>
-                    <div style="font-size: 0.875rem; color: #6b7280;">
-                        Status: ${mcpStatus}<br>
-                        Analyzed: ${mcpData.total_analyzed || 0} messages
                     </div>
                 </div>
                 <div style="padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
@@ -730,25 +712,17 @@ async function loadBroadcasts() {
 async function loadModeration() {
     try {
         const filter = document.getElementById('moderation-filter')?.value || 'all';
-        const [messagesResponse, commentsResponse] = await Promise.all([
-            apiFetch(`/moderation?filter=${filter}`),
-            apiFetch(`/comments?filter=${filter}`)
-        ]);
-        
-        const messagesData = await messagesResponse.json();
-        const commentsData = await commentsResponse.json();
+        const response = await apiFetch(`/moderation?filter=${filter}`);
+        const data = await response.json();
         
         const moderationList = document.getElementById('moderation-list');
         if (!moderationList) return;
         
-        const allItems = [
-            ...(messagesData.messages || []).map(msg => ({ ...msg, type: 'message' })),
-            ...(commentsData.comments || []).map(comment => ({ ...comment, type: 'comment' }))
-        ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        const messages = data.flaggedMessages || [];
         
-        if (allItems.length > 0) {
-            const html = allItems.map(item => {
-                const analysis = item.mcp_analysis;
+        if (messages.length > 0) {
+            const html = messages.map(item => {
+                const analysis = item.advisories?.[0];
                 const riskLevel = analysis ? 
                     (analysis.confidence > 0.7 ? 'high' : analysis.confidence > 0.4 ? 'medium' : 'low') : 'unknown';
                 const riskColor = {
@@ -758,33 +732,24 @@ async function loadModeration() {
                     unknown: '#6b7280'
                 }[riskLevel];
                 
-                const isComment = item.type === 'comment';
-                const phoneDisplay = item.phone_number?.replace(/\d(?=\d{4})/g, '*') || item.from_number?.replace(/\d(?=\d{4})/g, '*');
+                const phoneDisplay = item.from_number?.replace(/\d(?=\d{4})/g, '*');
                 
                 return `
                     <div class="moment-item" style="border-left: 4px solid ${riskColor};">
                         <div class="moment-header">
                             <div class="moment-info">
                                 <div class="moment-title">
-                                    ${isComment ? '💬 Comment' : '📱 Message'} from ${phoneDisplay}
-                                    ${isComment && item.moment_id ? ` on Moment #${item.moment_id.substring(0, 8)}` : ''}
+                                    📱 Message from ${phoneDisplay}
                                 </div>
                                 <div class="moment-meta">
                                     ${new Date(item.created_at).toLocaleString()} • 
                                     Risk: <span style="color: ${riskColor}; font-weight: 500;">${riskLevel.toUpperCase()}</span>
                                     ${analysis ? ` • Confidence: ${Math.round(analysis.confidence * 100)}%` : ''}
-                                    ${isComment ? ` • ${item.approved ? 'Approved' : 'Pending'}` : ''}
                                 </div>
                             </div>
                             <div class="moment-actions">
-                                ${isComment ? `
-                                    <button class="btn btn-sm btn-success" data-action="approve-comment" data-id="${item.id}">✅ Approve</button>
-                                    <button class="btn btn-sm" data-action="feature-comment" data-id="${item.id}">⭐ Feature</button>
-                                    <button class="btn btn-sm btn-danger" data-action="delete-comment" data-id="${item.id}">🗑️ Delete</button>
-                                ` : `
-                                    <button class="btn btn-sm btn-success" data-action="approve-message" data-id="${item.id}">✅ Approve</button>
-                                    <button class="btn btn-sm btn-danger" data-action="flag-message" data-id="${item.id}">🚫 Flag</button>
-                                `}
+                                <button class="btn btn-sm btn-success" data-action="approve-message" data-id="${item.id}">✅ Approve</button>
+                                <button class="btn btn-sm btn-danger" data-action="flag-message" data-id="${item.id}">🚫 Flag</button>
                                 <button class="btn btn-sm" data-action="preview-message" data-id="${item.id}">👁️ Preview</button>
                             </div>
                         </div>
@@ -793,13 +758,13 @@ async function loadModeration() {
                         </div>
                         ${analysis ? `
                             <div style="background: #f8fafc; padding: 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
-                                <strong>MCP Analysis:</strong>
+                                <strong>Analysis:</strong>
                                 ${analysis.harm_signals?.detected ? `<span style="color: #dc2626;">⚠️ ${analysis.harm_signals.type}: ${analysis.harm_signals.context}</span>` : ''}
                                 ${analysis.spam_indicators?.detected ? `<span style="color: #f59e0b;">📧 Spam patterns detected</span>` : ''}
                                 ${analysis.urgency_level === 'high' ? `<span style="color: #dc2626;">🚨 High urgency</span>` : ''}
                                 ${analysis.escalation_suggested ? `<span style="color: #dc2626;">⬆️ Escalation suggested</span>` : ''}
                             </div>
-                        ` : '<div style="color: #6b7280; font-size: 0.75rem;">No MCP analysis available</div>'}
+                        ` : '<div style="color: #6b7280; font-size: 0.75rem;">No analysis available</div>'}
                     </div>
                 `;
             }).join('');
@@ -809,7 +774,7 @@ async function loadModeration() {
                 <div class="empty-state">
                     <div class="empty-state-icon">✅</div>
                     <div>No items found</div>
-                    <p>All messages and comments are clean or no items match the current filter.</p>
+                    <p>All messages are clean or no items match the current filter.</p>
                 </div>
             `;
         }
@@ -922,7 +887,7 @@ async function loadSettings() {
         // Test webhook connectivity
         const webhookStatus = document.getElementById('webhook-status');
         try {
-            const response = await fetch('/health');
+            const response = await fetch(window.location.origin + '/health');
             if (response.ok) {
                 webhookStatus.innerHTML = '✓ Connected and verified';
                 webhookStatus.style.background = '#f0fdf4';
@@ -960,7 +925,7 @@ function saveSettings() {
 // Test webhook function
 async function testWebhook() {
     try {
-        const response = await fetch('/health');
+        const response = await fetch(window.location.origin + '/health');
         if (response.ok) {
             showSuccess('Webhook test successful - system is responding');
         } else {

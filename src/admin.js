@@ -352,7 +352,7 @@ router.get('/broadcasts', async (req, res) => {
   }
 });
 
-// Get subscribers
+// Get subscribers with stats
 router.get('/subscribers', async (req, res) => {
   try {
     const { filter = 'all' } = req.query;
@@ -368,7 +368,21 @@ router.get('/subscribers', async (req, res) => {
     const { data, error } = await query;
     if (error) throw error;
 
-    res.json({ subscribers: data || [] });
+    // Calculate stats
+    const total = data?.length || 0;
+    const active = data?.filter(s => s.opted_in).length || 0;
+    const inactive = total - active;
+    const commands_used = data?.filter(s => s.last_activity > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length || 0;
+
+    res.json({ 
+      subscribers: data || [],
+      stats: {
+        total,
+        active,
+        inactive,
+        commands_used
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -739,6 +753,40 @@ router.delete('/roles/:id', requireRole(['superadmin']), async (req, res) => {
       .eq('id', id);
     if (error) throw error;
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Upload media files
+router.post('/upload-media', async (req, res) => {
+  try {
+    // For now, return success without actual upload
+    // In production, this would upload to Supabase Storage
+    res.json({ 
+      success: true, 
+      files: [],
+      message: 'Media upload not implemented yet'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get admin users (placeholder)
+router.get('/admin-users', async (req, res) => {
+  try {
+    // Return empty list for now
+    res.json({ users: [] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create admin user (placeholder)
+router.post('/admin-users', async (req, res) => {
+  try {
+    res.json({ success: true, message: 'Admin user creation not implemented yet' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
