@@ -1,5 +1,5 @@
-// Direct API calls without Supabase library
-const API_BASE = '/functions/v1/admin-api';
+// Direct API calls to Supabase admin-api function
+const API_BASE = 'https://arqeiadudzwbmzdhqkit.supabase.co/functions/v1/admin-api';
 
 // Get auth token from localStorage
 function getAuthToken() {
