@@ -84,15 +84,32 @@ async function processMessage(message, value) {
         content = `[${messageType} message]`;
     }
 
-    // Handle opt-out commands
-    if (content.toLowerCase().trim() === 'stop' || content.toLowerCase().trim() === 'unsubscribe') {
+    // Handle commands
+    const command = content.toLowerCase().trim();
+    
+    if (command === 'stop' || command === 'unsubscribe') {
       await handleOptOut(fromNumber);
       return;
     }
-
-    // Handle opt-in commands
-    if (content.toLowerCase().trim() === 'start' || content.toLowerCase().trim() === 'join') {
+    
+    if (command === 'start' || command === 'join') {
       await handleOptIn(fromNumber);
+      return;
+    }
+    
+    if (command === 'help') {
+      await handleHelp(fromNumber);
+      return;
+    }
+    
+    if (command === 'regions') {
+      await handleRegions(fromNumber);
+      return;
+    }
+    
+    // Handle casual chat attempts
+    if (isCasualMessage(command)) {
+      await handleCasualChat(fromNumber);
       return;
     }
 
@@ -225,10 +242,19 @@ async function handleOptIn(phoneNumber) {
         double_opt_in_confirmed: true
       });
     
-    // Send welcome using hybrid system
-    await sendWelcomeHybrid(phoneNumber, defaultRegion, defaultCategories);
+    // Send community-focused welcome message
+    const welcomeMessage = `🌍 Welcome to YOUR community signal service!
+
+This is where South Africans share local opportunities, events, and news from your region.
+
+📱 Submit your moments by messaging here
+🌐 See all community posts: moments.unamifoundation.org
+📍 Choose regions: REGIONS
+❓ Commands: HELP`;
     
-    console.log(`User ${phoneNumber} opted in with hybrid welcome`);
+    await sendMessage(phoneNumber, welcomeMessage);
+    
+    console.log(`User ${phoneNumber} opted in with community-focused welcome`);
   } catch (error) {
     console.error('Opt-in error:', error);
   }
@@ -254,5 +280,82 @@ async function triggerN8nNGOWorkflow(data) {
   } catch (error) {
     console.error('N8N NGO workflow trigger failed:', error.message);
     // Don't throw - n8n failure shouldn't break message processing
+  }
+}
+
+function isCasualMessage(message) {
+  const casualPatterns = [
+    'hi', 'hey', 'hello', 'hola', 'howzit', 'sawubona',
+    'whatsapp', 'anyone', 'anybody', 'is anyone there',
+    'is anybody around', 'chat', 'talk', 'speak'
+  ];
+  return casualPatterns.some(pattern => message.includes(pattern));
+}
+
+async function handleHelp(phoneNumber) {
+  const helpMessage = `📡 Community Signal Service Commands:
+
+📍 REGIONS - Choose your areas (KZN, WC, GP, EC, FS, LP, MP, NC, NW)
+🛑 STOP - Unsubscribe from signals
+🔄 START - Resubscribe to signals
+
+💬 Submit moments by messaging here
+🌐 Full community feed: moments.unamifoundation.org
+
+This is YOUR community sharing platform.`;
+  
+  await sendMessage(phoneNumber, helpMessage);
+}
+
+async function handleRegions(phoneNumber) {
+  const regionsMessage = `📍 Choose your regions (reply with region codes):
+
+🏖️ KZN - KwaZulu-Natal
+🍷 WC - Western Cape
+🏙️ GP - Gauteng
+🌊 EC - Eastern Cape
+🌾 FS - Free State
+🌳 LP - Limpopo
+⛰️ MP - Mpumalanga
+🏜️ NC - Northern Cape
+💎 NW - North West
+
+Reply with codes like: KZN WC GP`;
+  
+  await sendMessage(phoneNumber, regionsMessage);
+}
+
+async function handleCasualChat(phoneNumber) {
+  const chatMessage = `👋 Hi! This is your community signal service.
+
+South Africans share local opportunities and events here.
+
+📱 Submit moments by messaging
+🌐 Browse all: moments.unamifoundation.org
+📍 Commands: HELP, REGIONS, STOP`;
+  
+  await sendMessage(phoneNumber, chatMessage);
+}
+
+async function sendMessage(phoneNumber, message) {
+  try {
+    const response = await axios.post(
+      `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_ID}/messages`,
+      {
+        messaging_product: 'whatsapp',
+        to: phoneNumber,
+        type: 'text',
+        text: { body: message }
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    console.log(`Message sent to ${phoneNumber}`);
+  } catch (error) {
+    console.error('Send message error:', error.response?.data || error.message);
   }
 }
