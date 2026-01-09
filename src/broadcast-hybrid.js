@@ -8,19 +8,35 @@ import {
 // Comprehensive 2-template + freeform system
 export async function broadcastMomentHybrid(momentId) {
   try {
-    // Get moment details with sponsor info
+    // Get moment details with sponsor info and featured comments
     const { data: moment, error: momentError } = await supabase
       .from('moments')
       .select(`
         *,
-        sponsors(display_name, tier)
+        sponsors(display_name, tier),
+        featured_comments:moment_comments!inner(
+          id, content, created_at, phone_number
+        )
       `)
       .eq('id', momentId)
+      .eq('moment_comments.featured', true)
+      .eq('moment_comments.approved', true)
       .single();
 
     if (momentError || !moment) {
       throw new Error('Moment not found');
     }
+
+    // Create comment patterns for auto-linking
+    const commentHashtag = `#M${moment.id.substring(0, 8)}`;
+    await supabase
+      .from('comment_patterns')
+      .upsert({
+        moment_id: moment.id,
+        pattern_type: 'hashtag',
+        pattern_value: commentHashtag,
+        active: true
+      });
 
     // Get active subscribers
     let subscriberQuery = supabase
@@ -46,7 +62,7 @@ export async function broadcastMomentHybrid(momentId) {
         moment_id: momentId,
         recipient_count: subscribers?.length || 0,
         status: 'in_progress',
-        template_used: 'hybrid_system'
+        template_used: 'hybrid_system_with_comments'
       })
       .select()
       .single();
@@ -108,7 +124,8 @@ export async function broadcastMomentHybrid(momentId) {
       recipients: subscribers?.length || 0,
       success: successCount,
       failures: failureCount,
-      methods_used: getMethodsUsed(results)
+      methods_used: getMethodsUsed(results),
+      featured_comments: moment.featured_comments?.length || 0
     };
 
   } catch (error) {
@@ -171,6 +188,17 @@ function formatFreeformMoment(moment) {
   message += `${moment.title}\n\n`;
   message += `${moment.content}\n\n`;
   
+  // Featured comments
+  if (moment.featured_comments && moment.featured_comments.length > 0) {
+    message += `💬 Community says:\n`;
+    moment.featured_comments.slice(0, 2).forEach(comment => {
+      const shortContent = comment.content.length > 80 ? 
+        comment.content.substring(0, 80) + '...' : comment.content;
+      message += `"${shortContent}" - Community member\n`;
+    });
+    message += '\n';
+  }
+  
   // Metadata
   message += `🏷️ ${moment.category}`;
   if (moment.region !== 'National') {
@@ -188,13 +216,17 @@ function formatFreeformMoment(moment) {
     }
   }
   
-  // Call to action
+  // Call to action with comment hashtag
   if (moment.pwa_link) {
     const trackingUrl = `${moment.pwa_link}?utm_source=whatsapp&utm_medium=freeform&utm_campaign=${moment.id}`;
     message += `🌐 More info: ${trackingUrl}\n\n`;
   } else {
     message += `🌐 More: https://moments.unamifoundation.org\n\n`;
   }
+  
+  // Comment invitation with hashtag
+  const commentHashtag = `#M${moment.id.substring(0, 8)}`;
+  message += `💬 Share your thoughts: Reply with ${commentHashtag}\n\n`;
   
   // Footer
   message += '📱 Reply STOP to unsubscribe';

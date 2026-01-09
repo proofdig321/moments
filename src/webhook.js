@@ -90,10 +90,9 @@ async function processMessage(message, value) {
       return;
     }
 
-    // Handle user replies to NGO re-engagement templates
-    if (content.toLowerCase().includes('yes') || content.toLowerCase().includes('ok')) {
-      const { handleNGOReply } = await import('./broadcast-ngo.js');
-      await handleNGOReply(fromNumber, content);
+    // Handle opt-in commands
+    if (content.toLowerCase().trim() === 'start' || content.toLowerCase().trim() === 'join') {
+      await handleOptIn(fromNumber);
       return;
     }
 
@@ -104,12 +103,12 @@ async function processMessage(message, value) {
     const { data: messageRecord, error: insertError } = await supabase
       .from('messages')
       .insert({
+        whatsapp_id: message.id,
         from_number: fromNumber,
         message_type: messageType,
         content,
         language_detected: languageDetected,
         media_id: mediaId,
-        raw_data: message,
         processed: false
       })
       .select()
@@ -123,6 +122,19 @@ async function processMessage(message, value) {
       return;
     }
 
+    // Auto-link message to moment as comment
+    try {
+      const { data: commentId } = await supabase.rpc('create_comment_from_message', {
+        p_message_id: messageRecord.id
+      });
+      
+      if (commentId) {
+        console.log(`Message auto-linked as comment: ${commentId}`);
+      }
+    } catch (commentError) {
+      console.error('Comment auto-linking failed:', commentError);
+    }
+
     // Process media if present
     if (mediaId) {
       try {
@@ -132,7 +144,7 @@ async function processMessage(message, value) {
       }
     }
 
-    // Call Supabase MCP function directly
+    // Call Supabase MCP function for message and comment analysis
     try {
       await supabase.rpc('mcp_advisory', {
         message_content: content,
@@ -141,8 +153,15 @@ async function processMessage(message, value) {
         from_number: fromNumber,
         message_timestamp: new Date().toISOString()
       });
+      
+      // Also analyze as potential comment
+      await supabase.rpc('mcp_comment_analysis', {
+        message_id: messageRecord.id,
+        content: content,
+        phone_number: fromNumber
+      });
     } catch (mcpError) {
-      console.error('Supabase MCP error:', mcpError);
+      console.error('MCP analysis error:', mcpError);
     }
 
     // Trigger n8n NGO workflow if configured

@@ -154,6 +154,15 @@ function handleAction(action, element) {
         case 'approve-message':
             approveMessage(id);
             break;
+        case 'approve-comment':
+            approveComment(id);
+            break;
+        case 'feature-comment':
+            featureComment(id);
+            break;
+        case 'delete-comment':
+            deleteComment(id);
+            break;
         case 'preview-message':
             previewMessage(id);
             break;
@@ -717,19 +726,29 @@ async function loadBroadcasts() {
     }
 }
 
-// Load moderation
+// Load moderation with comments
 async function loadModeration() {
     try {
         const filter = document.getElementById('moderation-filter')?.value || 'all';
-        const response = await apiFetch(`/moderation?filter=${filter}`);
-        const data = await response.json();
+        const [messagesResponse, commentsResponse] = await Promise.all([
+            apiFetch(`/moderation?filter=${filter}`),
+            apiFetch(`/comments?filter=${filter}`)
+        ]);
+        
+        const messagesData = await messagesResponse.json();
+        const commentsData = await commentsResponse.json();
         
         const moderationList = document.getElementById('moderation-list');
         if (!moderationList) return;
         
-        if (data.messages && data.messages.length > 0) {
-            const html = data.messages.map(msg => {
-                const analysis = msg.mcp_analysis;
+        const allItems = [
+            ...(messagesData.messages || []).map(msg => ({ ...msg, type: 'message' })),
+            ...(commentsData.comments || []).map(comment => ({ ...comment, type: 'comment' }))
+        ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
+        if (allItems.length > 0) {
+            const html = allItems.map(item => {
+                const analysis = item.mcp_analysis;
                 const riskLevel = analysis ? 
                     (analysis.confidence > 0.7 ? 'high' : analysis.confidence > 0.4 ? 'medium' : 'low') : 'unknown';
                 const riskColor = {
@@ -739,25 +758,38 @@ async function loadModeration() {
                     unknown: '#6b7280'
                 }[riskLevel];
                 
+                const isComment = item.type === 'comment';
+                const phoneDisplay = item.phone_number?.replace(/\d(?=\d{4})/g, '*') || item.from_number?.replace(/\d(?=\d{4})/g, '*');
+                
                 return `
                     <div class="moment-item" style="border-left: 4px solid ${riskColor};">
                         <div class="moment-header">
                             <div class="moment-info">
-                                <div class="moment-title">Message from ${msg.from_number.replace(/\d(?=\d{4})/g, '*')}</div>
+                                <div class="moment-title">
+                                    ${isComment ? '💬 Comment' : '📱 Message'} from ${phoneDisplay}
+                                    ${isComment && item.moment_id ? ` on Moment #${item.moment_id.substring(0, 8)}` : ''}
+                                </div>
                                 <div class="moment-meta">
-                                    ${new Date(msg.created_at).toLocaleString()} • 
+                                    ${new Date(item.created_at).toLocaleString()} • 
                                     Risk: <span style="color: ${riskColor}; font-weight: 500;">${riskLevel.toUpperCase()}</span>
                                     ${analysis ? ` • Confidence: ${Math.round(analysis.confidence * 100)}%` : ''}
+                                    ${isComment ? ` • ${item.approved ? 'Approved' : 'Pending'}` : ''}
                                 </div>
                             </div>
                             <div class="moment-actions">
-                                <button class="btn btn-sm btn-success" data-action="approve-message" data-id="${msg.id}">✅ Approve</button>
-                                <button class="btn btn-sm btn-danger" data-action="flag-message" data-id="${msg.id}">🚫 Flag</button>
-                                <button class="btn btn-sm" data-action="preview-message" data-id="${msg.id}">👁️ Preview</button>
+                                ${isComment ? `
+                                    <button class="btn btn-sm btn-success" data-action="approve-comment" data-id="${item.id}">✅ Approve</button>
+                                    <button class="btn btn-sm" data-action="feature-comment" data-id="${item.id}">⭐ Feature</button>
+                                    <button class="btn btn-sm btn-danger" data-action="delete-comment" data-id="${item.id}">🗑️ Delete</button>
+                                ` : `
+                                    <button class="btn btn-sm btn-success" data-action="approve-message" data-id="${item.id}">✅ Approve</button>
+                                    <button class="btn btn-sm btn-danger" data-action="flag-message" data-id="${item.id}">🚫 Flag</button>
+                                `}
+                                <button class="btn btn-sm" data-action="preview-message" data-id="${item.id}">👁️ Preview</button>
                             </div>
                         </div>
                         <div class="moment-content" style="margin-bottom: 0.5rem;">
-                            <strong>Content:</strong> ${msg.content || 'No text content'}
+                            <strong>Content:</strong> ${item.content || 'No text content'}
                         </div>
                         ${analysis ? `
                             <div style="background: #f8fafc; padding: 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
@@ -776,8 +808,8 @@ async function loadModeration() {
             moderationList.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-state-icon">✅</div>
-                    <div>No messages found</div>
-                    <p>All messages are clean or no messages match the current filter.</p>
+                    <div>No items found</div>
+                    <p>All messages and comments are clean or no items match the current filter.</p>
                 </div>
             `;
         }
@@ -1054,17 +1086,62 @@ function flagMessage(id) {
     });
 }
 
-function previewMessage(id) {
-    // Find message in current data and show detailed preview
-    const messageData = document.querySelector(`[data-action="preview-message"][data-id="${id}"]`);
-    if (messageData) {
-        const messageItem = messageData.closest('.moment-item');
-        const content = messageItem.querySelector('.moment-content').textContent;
-        const title = messageItem.querySelector('.moment-title').textContent;
-        const meta = messageItem.querySelector('.moment-meta').textContent;
-        
-        showConfirm(`${title}\n\n${meta}\n\n${content}`, () => {}, 'Message Preview', 'Close');
-    }
+// Comment management functions
+function approveComment(id) {
+    showConfirm('Approve this comment for public display?', async () => {
+        try {
+            const response = await apiFetch(`/comments/${id}/approve`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                showSuccess('Comment approved successfully');
+                loadModeration();
+            } else {
+                showError('Failed to approve comment');
+            }
+        } catch (error) {
+            showError('Failed to approve comment');
+        }
+    });
+}
+
+function featureComment(id) {
+    showConfirm('Feature this comment for broadcast inclusion?', async () => {
+        try {
+            const response = await apiFetch(`/comments/${id}/feature`, {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                showSuccess('Comment featured successfully');
+                loadModeration();
+            } else {
+                showError('Failed to feature comment');
+            }
+        } catch (error) {
+            showError('Failed to feature comment');
+        }
+    });
+}
+
+function deleteComment(id) {
+    showConfirm('Delete this comment permanently?', async () => {
+        try {
+            const response = await apiFetch(`/comments/${id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                showSuccess('Comment deleted successfully');
+                loadModeration();
+            } else {
+                showError('Failed to delete comment');
+            }
+        } catch (error) {
+            showError('Failed to delete comment');
+        }
+    });
 }
 function editCampaign(id) {
     // Load campaign data and open modal for editing
