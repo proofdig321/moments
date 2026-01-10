@@ -664,7 +664,7 @@ router.post('/campaigns/:id/publish', requireRole(['superadmin']), async (req, r
       .single();
     if (getErr || !campaign) throw new Error('Campaign not found');
 
-    // Create a moment from campaign
+    // Create a moment from campaign with proper intent flags
     const momentRecord = {
       title: campaign.title,
       content: campaign.content,
@@ -677,7 +677,11 @@ router.post('/campaigns/:id/publish', requireRole(['superadmin']), async (req, r
       pwa_link: null,
       scheduled_at: null,
       status: 'broadcasted',
-      created_by: campaign.created_by
+      broadcasted_at: new Date().toISOString(),
+      content_source: 'campaign',
+      publish_to_pwa: true,  // Auto-publish to PWA
+      publish_to_whatsapp: true,  // Auto-publish to WhatsApp
+      created_by: 'campaign_system'
     };
 
     const { data: moment, error: insertErr } = await supabase
@@ -690,16 +694,10 @@ router.post('/campaigns/:id/publish', requireRole(['superadmin']), async (req, r
     // Mark campaign as published
     await supabase.from('campaigns').update({ status: 'published', updated_at: new Date().toISOString() }).eq('id', id);
 
-    // Trigger broadcast asynchronously
-    try {
-      // lazy import to avoid cycles
-      const { broadcastMoment } = await import('./broadcast.js');
-      broadcastMoment(moment.id).catch(err => console.error('Campaign broadcast error:', err.message));
-    } catch (err) {
-      console.error('Failed to trigger broadcast:', err.message);
-    }
+    // Note: Moment intents are automatically created by trigger
+    // N8N intent-executor will process them within 1 minute
 
-    res.json({ success: true, moment_id: moment.id });
+    res.json({ success: true, moment_id: moment.id, campaign_id: id });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
