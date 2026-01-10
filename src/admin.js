@@ -65,6 +65,8 @@ router.post('/moments', async (req, res) => {
       media_urls = [],
       scheduled_at,
       status = 'draft',
+      publish_to_pwa = true,  // Default: publish to PWA
+      publish_to_whatsapp = false,  // Default: admin control for WhatsApp
       created_by = 'admin'
     } = req.body;
 
@@ -101,6 +103,8 @@ router.post('/moments', async (req, res) => {
         status: finalStatus,
         broadcasted_at: broadcastedAt,
         content_source: 'admin',
+        publish_to_pwa,  // Enable PWA distribution
+        publish_to_whatsapp,  // Optional WhatsApp distribution
         created_by
       })
       .select()
@@ -164,16 +168,54 @@ router.delete('/moments/:id', async (req, res) => {
   }
 });
 
-// Broadcast moment immediately
+// Broadcast moment immediately - use intent system
 router.post('/moments/:id/broadcast', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const result = await broadcastMoment(id);
+    // Update moment to enable WhatsApp broadcasting
+    const { data: moment, error: updateError } = await supabase
+      .from('moments')
+      .update({ 
+        publish_to_whatsapp: true,
+        status: 'broadcasted',
+        broadcasted_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Check if WhatsApp intent already exists
+    const { data: existingIntent } = await supabase
+      .from('moment_intents')
+      .select('id, status')
+      .eq('moment_id', id)
+      .eq('channel', 'whatsapp')
+      .single();
+
+    if (!existingIntent) {
+      // Create WhatsApp intent manually if trigger didn't fire
+      await supabase
+        .from('moment_intents')
+        .insert({
+          moment_id: id,
+          channel: 'whatsapp',
+          action: 'publish',
+          status: 'pending',
+          payload: {
+            title: moment.title,
+            summary: moment.content.substring(0, 100) + '...',
+            link: moment.pwa_link || `https://moments.unamifoundation.org/m/${id}`
+          }
+        });
+    }
 
     res.json({
       success: true,
-      broadcast: result
+      moment_id: id,
+      message: 'Moment queued for WhatsApp broadcast. N8N will process within 1 minute.'
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
