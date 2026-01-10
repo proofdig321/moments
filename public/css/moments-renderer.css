@@ -1,0 +1,122 @@
+/* PWA Moments Renderer - Enhanced Markdown Support */
+
+/* Moment content with proper Markdown rendering */
+.moment-content {
+    color: #374151;
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+/* WhatsApp-style content preservation */
+.moment-content.whatsapp-content {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Enhanced list styling for WhatsApp content */
+.moment-content ul,
+.moment-content ol {
+    margin: 0.75rem 0;
+    padding-left: 1.5rem;
+}
+
+.moment-content li {
+    margin: 0.25rem 0;
+    line-height: 1.5;
+}
+
+.moment-content ul li {
+    list-style-type: disc;
+}
+
+.moment-content ol li {
+    list-style-type: decimal;
+}
+
+/* Paragraph spacing */
+.moment-content p {
+    margin: 0.75rem 0;
+}
+
+.moment-content p:first-child {
+    margin-top: 0;
+}
+
+.moment-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* Headers */
+.moment-content h1,
+.moment-content h2,
+.moment-content h3,
+.moment-content h4 {
+    font-weight: 600;
+    margin: 1rem 0 0.5rem 0;
+    color: #1f2937;
+}
+
+.moment-content h1 { font-size: 1.5rem; }
+.moment-content h2 { font-size: 1.25rem; }
+.moment-content h3 { font-size: 1.125rem; }
+.moment-content h4 { font-size: 1rem; }
+
+/* Inline formatting */
+.moment-content strong {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.moment-content em {
+    font-style: italic;
+}
+
+.moment-content code {
+    background: #f3f4f6;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875em;
+}
+
+.moment-content a {
+    color: #2563eb;
+    text-decoration: underline;
+}
+
+.moment-content a:hover {
+    color: #1d4ed8;
+}
+
+/* Collapsed content with proper Markdown */
+.moment-content.collapsed {
+    max-height: 4.5em;
+    overflow: hidden;
+    position: relative;
+}
+
+.moment-content.collapsed::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1.5em;
+    background: linear-gradient(transparent, white);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .moment-content {
+        font-size: 0.9rem;
+    }
+    
+    .moment-content ul,
+    .moment-content ol {
+        padding-left: 1.25rem;
+    }
+    
+    .moment-content h1 { font-size: 1.25rem; }
+    .moment-content h2 { font-size: 1.125rem; }
+    .moment-content h3 { font-size: 1rem; }
+}

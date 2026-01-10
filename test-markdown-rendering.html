@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Rendering Test</title>
+    <link rel="stylesheet" href="/css/moments-renderer.css">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 2rem; background: #f8fafc; }
+        .test-container { max-width: 800px; margin: 0 auto; }
+        .test-case { background: white; padding: 1.5rem; margin-bottom: 2rem; border-radius: 0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .test-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #1f2937; }
+        .test-input { background: #f3f4f6; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem; font-family: monospace; white-space: pre-wrap; }
+        .test-output { border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>PWA Markdown Rendering Test</h1>
+        
+        <div class="test-case">
+            <div class="test-title">WhatsApp-style Numbered List</div>
+            <div class="test-input">1. First item with important info
+2. Second item with details
+3. Third item with conclusion</div>
+            <div class="test-output moment-content" id="test1"></div>
+        </div>
+        
+        <div class="test-case">
+            <div class="test-title">WhatsApp-style Bullet Points</div>
+            <div class="test-input">- Community garden project
+- Free seedlings available
+- Training sessions included</div>
+            <div class="test-output moment-content" id="test2"></div>
+        </div>
+        
+        <div class="test-case">
+            <div class="test-title">Mixed Content with Line Breaks</div>
+            <div class="test-input">**Important Update**
+
+New community center opening next week.
+
+Key features:
+1. Computer lab with free internet
+2. Meeting rooms for local groups
+3. Children's play area
+
+Contact us for more info!</div>
+            <div class="test-output moment-content" id="test3"></div>
+        </div>
+        
+        <div class="test-case">
+            <div class="test-title">Standard Markdown</div>
+            <div class="test-input"># Community Update
+
+This is a **bold** statement with *italic* text.
+
+Visit our [website](https://example.com) for more information.</div>
+            <div class="test-output moment-content" id="test4"></div>
+        </div>
+    </div>
+
+    <script src="/js/moments-renderer.js"></script>
+    <script>
+        // Test cases
+        const tests = [
+            {
+                id: 'test1',
+                content: '1. First item with important info\n2. Second item with details\n3. Third item with conclusion',
+                isWhatsApp: true
+            },
+            {
+                id: 'test2', 
+                content: '- Community garden project\n- Free seedlings available\n- Training sessions included',
+                isWhatsApp: true
+            },
+            {
+                id: 'test3',
+                content: '**Important Update**\n\nNew community center opening next week.\n\nKey features:\n1. Computer lab with free internet\n2. Meeting rooms for local groups\n3. Children\'s play area\n\nContact us for more info!',
+                isWhatsApp: true
+            },
+            {
+                id: 'test4',
+                content: '# Community Update\n\nThis is a **bold** statement with *italic* text.\n\nVisit our [website](https://example.com) for more information.',
+                isWhatsApp: false
+            }
+        ];
+        
+        // Run tests
+        tests.forEach(test => {
+            const element = document.getElementById(test.id);
+            const rendered = window.momentsRenderer.render(test.content, { isWhatsApp: test.isWhatsApp });
+            element.innerHTML = rendered;
+        });
+    </script>
+</body>
+</html>

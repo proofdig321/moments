@@ -7,6 +7,7 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2563eb">
     <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/admin-header.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; line-height: 1.5; }
@@ -236,31 +237,70 @@
         </div>
     </nav>
 
-    <div class="header">
-        <div class="container">
-            <div class="header-content">
-                <div class="header-main">
-                    <h1>
-                        <img src="/logo.png" alt="Unami Foundation" onerror="this.style.display='none'" style="height: 30px; width: auto; margin-right: 8px;">
-                        📢 Unami Foundation Moments App
-                    </h1>
+    <!-- Refactored Admin Header: Branding | User Controls | Navigation -->
+    <div class="admin-header">
+        <div class="admin-header-container">
+            <!-- Three-section header layout -->
+            <div class="admin-header-top">
+                <!-- Section 1: Branding -->
+                <div class="admin-branding">
+                    <img src="/logo.png" alt="Unami Foundation" onerror="this.style.display='none'">
+                    <h1>Moments Admin</h1>
                 </div>
-                <div class="auth-area" id="auth-area">
-                    <span class="user-info" id="user-email"></span>
-                    <button id="sign-out" class="btn btn-sm">Sign Out</button>
+                
+                <!-- Section 2: User Controls -->
+                <div class="admin-user-controls" id="auth-area">
+                    <div class="admin-user-info">
+                        <span id="user-email"></span>
+                        <span class="admin-user-role">Administrator</span>
+                    </div>
+                    <button id="sign-out" class="btn btn-sm">
+                        <span class="icon icon-sign-out"></span>
+                        Sign Out
+                    </button>
                 </div>
             </div>
-            <div class="nav" id="admin-nav">
-                <button class="nav-toggle-admin" id="nav-toggle-admin" onclick="toggleAdminNav()">☰ Menu</button>
-                <button data-section="dashboard" class="active">📊 Dashboard</button>
-                <button data-section="moments">📝 Moments</button>
-                <button data-section="campaigns">📢 Campaigns</button>
-                <button data-section="sponsors">🏢 Sponsors</button>
-                <button data-section="moderation">🛡️ Moderation</button>
-                <button data-section="subscribers">📱 Subscribers</button>
-                <button data-section="broadcasts">📡 Broadcasts</button>
-                <button data-section="settings">⚙️ Settings</button>
-                <button data-section="help">❓ Help & Guide</button>
+            
+            <!-- Section 3: Navigation with horizontal scroll -->
+            <div class="admin-nav-container">
+                <nav class="admin-nav" id="admin-nav">
+                    <button class="admin-nav-item active" data-section="dashboard">
+                        <span class="icon icon-dashboard"></span>
+                        <span>Dashboard</span>
+                    </button>
+                    <button class="admin-nav-item" data-section="moments">
+                        <span class="icon icon-moments"></span>
+                        <span>Moments</span>
+                    </button>
+                    <button class="admin-nav-item" data-section="campaigns">
+                        <span class="icon icon-campaigns"></span>
+                        <span>Campaigns</span>
+                    </button>
+                    <button class="admin-nav-item" data-section="sponsors">
+                        <span class="icon icon-sponsors"></span>
+                        <span>Sponsors</span>
+                    </button>
+                    <button class="admin-nav-item" data-section="moderation">
+                        <span class="icon icon-moderation"></span>
+                        <span>Moderation</span>
+                    </button>
+                    <button class="admin-nav-item" data-section="subscribers">
+                        <span class="icon icon-subscribers"></span>
+                        <span>Subscribers</span>
+                    </button>
+                    <button class="admin-nav-item" data-section="broadcasts">
+                        <span class="icon icon-broadcasts"></span>
+                        <span>Broadcasts</span>
+                    </button>
+                    <button class="admin-nav-item" data-section="settings">
+                        <span class="icon icon-settings"></span>
+                        <span>Settings</span>
+                    </button>
+                    <button class="admin-nav-item" data-section="help">
+                        <span class="icon icon-help"></span>
+                        <span>Help</span>
+                    </button>
+                </nav>
             </div>
         </div>
     </div>

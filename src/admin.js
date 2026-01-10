@@ -50,7 +50,7 @@ router.get('/moments', async (req, res) => {
   }
 });
 
-// Create new moment
+// Create new moment - preserve content formatting
 router.post('/moments', async (req, res) => {
   try {
     const {
@@ -64,7 +64,7 @@ router.post('/moments', async (req, res) => {
       pwa_link,
       media_urls = [],
       scheduled_at,
-      status = 'draft', // Allow explicit status setting
+      status = 'draft',
       created_by = 'admin'
     } = req.body;
 
@@ -72,11 +72,12 @@ router.post('/moments', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // If status is explicitly set to 'broadcasted', set broadcasted_at
+    // Preserve content formatting - don't strip newlines or whitespace
+    const preservedContent = content.toString();
+    
     const finalStatus = status || (scheduled_at ? 'scheduled' : 'draft');
     const broadcastedAt = finalStatus === 'broadcasted' ? new Date().toISOString() : null;
     
-    // Normalize media_urls: accept comma-separated string or array
     let normalizedMedia = [];
     if (Array.isArray(media_urls)) {
       normalizedMedia = media_urls.map(u => (u || '').toString().trim()).filter(Boolean);
@@ -88,7 +89,7 @@ router.post('/moments', async (req, res) => {
       .from('moments')
       .insert({
         title,
-        content,
+        content: preservedContent, // Store with original formatting
         region,
         category,
         language,

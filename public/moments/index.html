@@ -7,6 +7,7 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2563eb">
     <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/moments-renderer.css">
     <meta name="description" content="Community updates and opportunities across South Africa">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -255,52 +256,8 @@
         }
 
         function displayMoments(moments) {
-            const container = document.getElementById('moments-container');
-            
-            if (moments.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">🌱</div>
-                        <h3>Community moments coming soon</h3>
-                        <p>We're building something amazing for South African communities. Join our WhatsApp to be the first to receive updates.</p>
-                        <a href="https://wa.me/27658295041?text=START" class="join-whatsapp">
-                            📱 Join WhatsApp Community
-                        </a>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = moments.map(moment => `
-                <div class="moment-card">
-                    ${renderSponsorBranding(moment.sponsors, moment.is_sponsored)}
-                    <h3 class="moment-title">${escapeHtml(moment.title)}</h3>
-                    <div class="moment-content ${moment.content.length > 200 ? 'collapsed' : ''}" data-full-content="${escapeHtml(moment.content)}">
-                        ${escapeHtml(moment.content.length > 200 ? moment.content.substring(0, 200) : moment.content)}
-                    </div>
-                    ${moment.content.length > 200 ? '<button class="expand-content" onclick="toggleContent(this)">Read more</button>' : ''}
-                    
-                    ${renderMedia(moment.media_urls)}
-                    ${renderComments(moment.comments)}
-                    
-                    <div class="moment-meta">
-                        <span class="badge region-badge">${escapeHtml(moment.region)}</span>
-                        <span class="badge category-badge">${escapeHtml(moment.category)}</span>
-                        ${moment.is_sponsored ? '<span class="badge sponsored-badge">Sponsored</span>' : ''}
-                        ${moment.content_source === 'community' ? '<span class="badge" style="background: #e0f2fe; color: #0277bd;">Community</span>' : ''}
-                        ${moment.content_source === 'campaign' ? '<span class="badge" style="background: #fff3e0; color: #f57c00;">Campaign</span>' : ''}
-                        ${moment.comments && moment.comments.length > 0 ? `<span class="badge" style="background: #f0f9ff; color: #0369a1;">${moment.comments.length} comments</span>` : ''}
-                    </div>
-                    
-                    <div class="moment-footer">
-                        <span>${formatDate(moment.broadcasted_at)}</span>
-                        ${renderSponsorAttribution(moment.sponsors, moment.is_sponsored)}
-                        <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;">
-                            💬 Send your thoughts to <a href="https://wa.me/27658295041?text=${encodeURIComponent('#M' + moment.id.substring(0, 8) + ' ')}">WhatsApp</a>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+            // Use the enhanced Markdown renderer
+            displayMomentsWithMarkdown(moments);
         }
         
         function renderSponsorBranding(sponsor, isSponsored) {
@@ -408,19 +365,8 @@
         }
         
         function toggleContent(button) {
-            const contentDiv = button.previousElementSibling;
-            const isCollapsed = contentDiv.classList.contains('collapsed');
-            
-            if (isCollapsed) {
-                contentDiv.innerHTML = escapeHtml(contentDiv.dataset.fullContent);
-                contentDiv.classList.remove('collapsed');
-                button.textContent = 'Read less';
-            } else {
-                const shortContent = contentDiv.dataset.fullContent.substring(0, 200);
-                contentDiv.innerHTML = escapeHtml(shortContent);
-                contentDiv.classList.add('collapsed');
-                button.textContent = 'Read more';
-            }
+            // Use the enhanced Markdown-aware toggle function
+            toggleMomentContent(button);
         }
         
         function openMedia(url) {
@@ -489,6 +435,7 @@
             loadMoments();
         }, 30 * 1000);
     </script>
+    <script src="/js/moments-renderer.js"></script>
     <script src="/js/analytics.js"></script>
 </body>
 </html>
