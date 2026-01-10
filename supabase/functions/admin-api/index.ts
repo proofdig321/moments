@@ -55,14 +55,7 @@ serve(async (req) => {
       }
       
       // Verify password
-      let validPassword = false
-      try {
-        validPassword = await bcrypt.compare(password, admin.password_hash)
-      } catch (bcryptError) {
-        if (email === 'info@unamifoundation.org' && password === 'Proof321#') {
-          validPassword = true
-        }
-      }
+      const validPassword = await bcrypt.compare(password, admin.password_hash)
       
       if (!validPassword) {
         return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
@@ -173,17 +166,37 @@ serve(async (req) => {
 
     // Compliance check endpoint
     if (path.includes('/compliance/check') && method === 'POST' && body) {
-      // Simple compliance check logic
-      const compliance = {
-        approved: true,
-        confidence: 0.95,
-        issues: [],
-        recommendations: []
+      // Real MCP compliance check - call MCP service
+      try {
+        const mcpResponse = await fetch(`${Deno.env.get('MCP_ENDPOINT') || 'https://mcp-production.up.railway.app'}/advisory`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: body.content,
+            metadata: { source: 'admin_review', region: body.region }
+          })
+        })
+        
+        const mcpData = await mcpResponse.json()
+        
+        const compliance = {
+          approved: mcpData.confidence < 0.3,
+          confidence: 1 - mcpData.confidence,
+          issues: mcpData.harm_signals || [],
+          recommendations: mcpData.recommendations || []
+        }
+        
+        return new Response(JSON.stringify({ compliance }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      } catch (mcpError) {
+        console.error('MCP compliance check failed:', mcpError)
+        return new Response(JSON.stringify({ 
+          compliance: { approved: false, confidence: 0, issues: ['MCP service unavailable'], recommendations: [] }
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
       }
-      
-      return new Response(JSON.stringify({ compliance }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
     }
 
     // Get compliance categories
@@ -266,14 +279,19 @@ serve(async (req) => {
       const [moments, subscribers, broadcasts] = await Promise.all([
         supabase.from('moments').select('*', { count: 'exact' }),
         supabase.from('subscriptions').select('*', { count: 'exact' }).eq('opted_in', true),
-        supabase.from('broadcasts').select('*', { count: 'exact' })
+        supabase.from('broadcasts').select('success_count, failure_count')
       ])
+
+      // Calculate real success rate from broadcasts
+      const totalSuccess = broadcasts.data?.reduce((sum, b) => sum + (b.success_count || 0), 0) || 0
+      const totalFailure = broadcasts.data?.reduce((sum, b) => sum + (b.failure_count || 0), 0) || 0
+      const successRate = totalSuccess + totalFailure > 0 ? Math.round((totalSuccess / (totalSuccess + totalFailure)) * 100) : 0
 
       return new Response(JSON.stringify({
         totalMoments: moments.count || 0,
         activeSubscribers: subscribers.count || 0,
         totalBroadcasts: broadcasts.count || 0,
-        successRate: 95
+        successRate: successRate
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -308,7 +326,9 @@ serve(async (req) => {
           media_urls: body.media_urls || [],
           status: body.scheduled_at ? 'scheduled' : 'draft',
           created_by: 'admin',
-          content_source: 'admin'
+          content_source: 'admin',
+          publish_to_whatsapp: body.publish_to_whatsapp || false,
+          publish_to_pwa: body.publish_to_pwa !== false
         })
         .select()
         .single()
@@ -323,6 +343,76 @@ serve(async (req) => {
       
       // Auto-broadcast admin moments if not scheduled
       if (!body.scheduled_at) {
+        // Create intents directly in admin API
+        try {
+          const createdIntents = []
+          
+          // PWA intent
+          if (moment.publish_to_pwa !== false) {
+            const { data: existingPwa } = await supabase
+              .from('moment_intents')
+              .select('id')
+              .eq('moment_id', moment.id)
+              .eq('channel', 'pwa')
+              .single()
+            
+            if (!existingPwa) {
+              const { data: pwaIntent } = await supabase
+                .from('moment_intents')
+                .insert({
+                  moment_id: moment.id,
+                  channel: 'pwa',
+                  action: 'publish',
+                  status: 'pending',
+                  payload: {
+                    title: moment.title,
+                    full_text: moment.content,
+                    link: moment.pwa_link || `https://moments.unamifoundation.org/m/${moment.id}`
+                  }
+                })
+                .select('id')
+                .single()
+              
+              if (pwaIntent) createdIntents.push(pwaIntent.id)
+            }
+          }
+          
+          // WhatsApp intent
+          if (moment.publish_to_whatsapp) {
+            const { data: existingWa } = await supabase
+              .from('moment_intents')
+              .select('id')
+              .eq('moment_id', moment.id)
+              .eq('channel', 'whatsapp')
+              .single()
+            
+            if (!existingWa) {
+              const { data: waIntent } = await supabase
+                .from('moment_intents')
+                .insert({
+                  moment_id: moment.id,
+                  channel: 'whatsapp',
+                  action: 'publish',
+                  status: 'pending',
+                  template_id: 'marketing_v1',
+                  payload: {
+                    title: moment.title,
+                    summary: moment.content.substring(0, 100) + '...',
+                    link: moment.pwa_link || `https://moments.unamifoundation.org/m/${moment.id}`
+                  }
+                })
+                .select('id')
+                .single()
+              
+              if (waIntent) createdIntents.push(waIntent.id)
+            }
+          }
+          
+          console.log(`✅ Created ${createdIntents.length} intents for moment ${moment.id}`)
+        } catch (intentError) {
+          console.error('❌ Intent creation failed:', intentError.message)
+        }
+
         try {
           const { data: subscribers } = await supabase
             .from('subscriptions')
@@ -812,22 +902,52 @@ serve(async (req) => {
 
     // Media upload endpoint
     if (path.includes('/upload-media') && method === 'POST') {
-      // For now, return mock success - in production this would handle file uploads
-      return new Response(JSON.stringify({ 
-        success: true,
-        files: [{
-          id: 'mock_file_id',
-          originalName: 'uploaded_file.jpg',
-          mimeType: 'image/jpeg',
-          size: 1024,
-          publicUrl: 'https://via.placeholder.com/300x200',
-          bucket: 'images',
-          path: 'moments/mock_file.jpg'
-        }],
-        message: 'File uploaded successfully'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+      try {
+        // Real Supabase Storage integration
+        const formData = await req.formData()
+        const file = formData.get('file') as File
+        
+        if (!file) {
+          return new Response(JSON.stringify({ error: 'No file provided' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+        
+        const fileName = `moments/${Date.now()}_${file.name}`
+        const { data, error } = await supabase.storage
+          .from('media')
+          .upload(fileName, file)
+        
+        if (error) throw error
+        
+        const { data: publicUrl } = supabase.storage
+          .from('media')
+          .getPublicUrl(fileName)
+        
+        return new Response(JSON.stringify({ 
+          success: true,
+          files: [{
+            id: data.path,
+            originalName: file.name,
+            mimeType: file.type,
+            size: file.size,
+            publicUrl: publicUrl.publicUrl,
+            bucket: 'media',
+            path: fileName
+          }],
+          message: 'File uploaded successfully'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      } catch (uploadError) {
+        return new Response(JSON.stringify({ 
+          error: 'Upload failed: ' + uploadError.message 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
     }
 
     // Default response

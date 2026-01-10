@@ -1,0 +1,91 @@
+#!/bin/bash
+
+echo "🚀 PRODUCTION DEPLOYMENT - WhatsApp Moments System"
+echo "=================================================="
+
+echo ""
+echo "✅ ALL ISSUES FIXED:"
+echo "--------------------"
+echo "✅ Removed hardcoded credentials from admin API"
+echo "✅ Replaced mock compliance with real MCP integration"
+echo "✅ Calculated real success rates from database"
+echo "✅ Implemented real Supabase Storage file upload"
+echo "✅ Fixed n8n workflow subscriber filtering"
+echo "✅ Improved WhatsApp message formatting"
+
+echo ""
+echo "📋 DEPLOYMENT CHECKLIST:"
+echo "------------------------"
+
+echo ""
+echo "1. DATABASE MIGRATIONS:"
+echo "   ✅ Already applied - moment_intents table exists"
+echo "   ✅ Publish flags added to moments table"
+
+echo ""
+echo "2. SUPABASE FUNCTIONS:"
+echo "   🔄 Deploy admin-api with fixes:"
+echo "   → supabase functions deploy admin-api --project-ref <PROJECT_REF>"
+
+echo ""
+echo "3. SUPABASE STORAGE:"
+echo "   🔄 Create media bucket:"
+echo "   → Create 'media' bucket in Supabase Storage"
+echo "   → Set public access policy for uploaded files"
+
+echo ""
+echo "4. N8N WORKFLOW:"
+echo "   🔄 Import workflow:"
+echo "   → Import n8n/intent-executor-workflow.json"
+echo "   → Configure environment variables"
+
+echo ""
+echo "🌍 REQUIRED ENVIRONMENT VARIABLES:"
+echo "----------------------------------"
+
+echo ""
+echo "Supabase Functions (admin-api):"
+echo "- SUPABASE_URL ✅"
+echo "- SUPABASE_SERVICE_ROLE_KEY ✅"
+echo "- MCP_ENDPOINT (optional, defaults to Railway MCP)"
+
+echo ""
+echo "n8n Instance:"
+echo "- SUPABASE_URL"
+echo "- SUPABASE_SERVICE_ROLE"
+echo "- WHATSAPP_TOKEN"
+echo "- PHONE_NUMBER_ID"
+
+echo ""
+echo "🧪 TESTING COMMANDS:"
+echo "--------------------"
+
+echo ""
+echo "1. Test intent creation:"
+echo "   curl -X POST <ADMIN_API_URL>/moments \\"
+echo "     -H 'Authorization: Bearer <TOKEN>' \\"
+echo "     -H 'Content-Type: application/json' \\"
+echo "     -d '{\"title\":\"Test\",\"content\":\"Test content\",\"publish_to_whatsapp\":true}'"
+
+echo ""
+echo "2. Check pending intents:"
+echo "   SELECT * FROM moment_intents WHERE status = 'pending';"
+
+echo ""
+echo "3. Monitor n8n execution logs"
+
+echo ""
+echo "🎯 PRODUCTION READY FEATURES:"
+echo "-----------------------------"
+echo "✅ Real authentication (no hardcoded credentials)"
+echo "✅ Real MCP compliance checking"
+echo "✅ Real file upload with Supabase Storage"
+echo "✅ Calculated analytics from database"
+echo "✅ Proper WhatsApp message formatting"
+echo "✅ Region-based subscriber filtering"
+echo "✅ Error handling and logging"
+echo "✅ Intent-based architecture"
+echo "✅ Scalable n8n processing"
+
+echo ""
+echo "🚀 READY FOR PRODUCTION DEPLOYMENT!"

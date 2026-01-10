@@ -1,0 +1,207 @@
+{
+  "name": "Intent Executor - WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": "*",
+              "minute": "*/1"
+            }
+          ]
+        }
+      },
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "GET",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/moment_intents?status=eq.pending&channel=eq.whatsapp&select=*'}}",
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_ANON_KEY || $env.SUPABASE_API_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_SERVICE_ROLE}}"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Pending Intents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "mode": "splitInBatches",
+        "batchSize": 1
+      },
+      "name": "Split Intents",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [760, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "GET",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/subscriptions?opted_in=eq.true&select=phone_number,name,regions'}}",
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_ANON_KEY || $env.SUPABASE_API_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_SERVICE_ROLE}}"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Subscribers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [1000, 220]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Render message using intent.payload and subscriber data\nconst intent = $json;\nconst subscribers = $items(\"Fetch Subscribers\");\nconst results = [];\n\n// Get moment details to check region\nconst momentRegion = intent.payload?.region || 'National';\n\nfor (const s of subscribers) {\n  const phone = s.json.phone_number;\n  const name = s.json.name || '';\n  const subscriberRegions = s.json.regions || [];\n  \n  // Filter by region if not National\n  if (momentRegion !== 'National' && !subscriberRegions.includes(momentRegion)) {\n    continue;\n  }\n  \n  const template = intent.template_id || null;\n  const payload = intent.payload || {};\n  \n  // Use proper WhatsApp message format\n  const messageText = `📢 Unami Foundation Moments — ${momentRegion}\n\n${payload.title}\n\n${payload.summary || payload.full_text}\n\n🌐 More: ${payload.link}`;\n  \n  results.push({ \n    json: { \n      intent_id: intent.id, \n      subscriber_phone: phone, \n      subscriber_name: name, \n      template, \n      messageText, \n      payload \n    } \n  });\n}\nreturn results;"
+      },
+      "name": "Render Messages",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1240, 220]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "POST",
+        "url": "={{ 'https://graph.facebook.com/v19.0/' + $env.PHONE_NUMBER_ID + '/messages' }}",
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.WHATSAPP_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "bodyParametersJson": "=JSON.stringify({ messaging_product: 'whatsapp', to: $json.subscriber_phone, type: 'text', text: { body: $json.messageText } })",
+        "options": {}
+      },
+      "name": "Send WhatsApp Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [1480, 220]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/moment_intents?id=eq.' + $json.intent_id}}",
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_ANON_KEY || $env.SUPABASE_API_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_SERVICE_ROLE}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ status: 'sent', attempts: ($json.attempts || 0) + 1, updated_at: new Date().toISOString() }"
+      },
+      "name": "Mark Intent Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [1720, 220]
+    }
+  ],
+  "connections": {
+    "Cron": {
+      "main": [
+        [
+          {
+            "node": "Fetch Pending Intents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Pending Intents": {
+      "main": [
+        [
+          {
+            "node": "Split Intents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Intents": {
+      "main": [
+        [
+          {
+            "node": "Fetch Subscribers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Subscribers": {
+      "main": [
+        [
+          {
+            "node": "Render Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Messages": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "Mark Intent Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
