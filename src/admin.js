@@ -451,24 +451,36 @@ router.get('/broadcasts', async (req, res) => {
 // Get subscribers with stats
 router.get('/subscribers', async (req, res) => {
   try {
-    const { filter = 'all' } = req.query;
+    const { filter = 'all', limit = 50 } = req.query;
     
     let query = supabase
       .from('subscriptions')
-      .select('*')
-      .order('last_activity', { ascending: false });
+      .select(`
+        *,
+        'whatsapp_command' as consent_method,
+        opted_in_at as consent_timestamp
+      `)
+      .order('last_activity', { ascending: false })
+      .limit(limit);
 
     if (filter === 'active') query = query.eq('opted_in', true);
     if (filter === 'inactive') query = query.eq('opted_in', false);
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      console.error('Subscribers query error:', error);
+      throw error;
+    }
+
+    console.log(`Found ${data?.length || 0} subscribers with filter: ${filter}`);
 
     // Calculate stats
     const total = data?.length || 0;
     const active = data?.filter(s => s.opted_in).length || 0;
     const inactive = total - active;
-    const commands_used = data?.filter(s => s.last_activity > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length || 0;
+    const commands_used = data?.filter(s => 
+      s.last_activity && new Date(s.last_activity) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    ).length || 0;
 
     res.json({ 
       subscribers: data || [],
@@ -480,6 +492,7 @@ router.get('/subscribers', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Subscribers endpoint error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -928,20 +941,47 @@ router.post('/logout', async (req, res) => {
   }
 });
 
-// Get admin users (placeholder)
+// Get admin users
 router.get('/admin-users', async (req, res) => {
   try {
-    // Return empty list for now
-    res.json({ users: [] });
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('id, email, name, active, created_at, last_login')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    res.json({ users: data || [] });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Create admin user (placeholder)
+// Create admin user
 router.post('/admin-users', async (req, res) => {
   try {
-    res.json({ success: true, message: 'Admin user creation not implemented yet' });
+    const { email, name, password } = req.body;
+    
+    if (!email || !name || !password) {
+      return res.status(400).json({ error: 'Email, name, and password are required' });
+    }
+    
+    // Hash password (in production, use bcrypt)
+    const bcrypt = await import('bcrypt');
+    const password_hash = await bcrypt.hash(password, 10);
+    
+    const { data, error } = await supabase
+      .from('admin_users')
+      .insert({ 
+        email, 
+        name, 
+        password_hash,
+        created_by: req.user?.id || null
+      })
+      .select('id, email, name, active, created_at')
+      .single();
+    
+    if (error) throw error;
+    res.json({ success: true, user: data });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
