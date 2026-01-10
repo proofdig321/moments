@@ -206,15 +206,34 @@ async function processMessage(message, value) {
 
 async function handleOptOut(phoneNumber) {
   try {
-    // Update subscription status
-    await supabase
+    // Update existing subscription or create new one with opted_out status
+    const { data: existing } = await supabase
       .from('subscriptions')
-      .upsert({
-        phone_number: phoneNumber,
-        opted_in: false,
-        opted_out_at: new Date().toISOString(),
-        last_activity: new Date().toISOString()
-      });
+      .select('id')
+      .eq('phone_number', phoneNumber)
+      .single();
+    
+    if (existing) {
+      // Update existing subscription
+      await supabase
+        .from('subscriptions')
+        .update({
+          opted_in: false,
+          opted_out_at: new Date().toISOString(),
+          last_activity: new Date().toISOString()
+        })
+        .eq('phone_number', phoneNumber);
+    } else {
+      // Create new subscription record for opt-out
+      await supabase
+        .from('subscriptions')
+        .insert({
+          phone_number: phoneNumber,
+          opted_in: false,
+          opted_out_at: new Date().toISOString(),
+          last_activity: new Date().toISOString()
+        });
+    }
     
     // Send unsubscribe confirmation using approved template
     await sendUnsubscribeHybrid(phoneNumber);
