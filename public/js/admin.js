@@ -399,29 +399,32 @@ function renderMediaPreview(mediaUrls) {
                             ${hasMore && index === 2 ? `<div class="media-count">+${mediaUrls.length - 3}</div>` : ''}
                         </div>
                     `;
-                } else if (['mp4', 'webm', 'mov'].includes(ext)) {
+                } else if (['mp4', 'webm', 'mov', '3gp'].includes(ext)) {
                     return `
                         <div class="media-preview" onclick="openMediaModal('${escapeHtml(url)}')">
-                            <video preload="metadata"><source src="${escapeHtml(url)}"></video>
+                            <video preload="metadata" onerror="this.parentElement.innerHTML='<div class=\"media-icon\">🎥</div>'">
+                                <source src="${escapeHtml(url)}">
+                            </video>
                             <div class="media-icon">▶️</div>
                             ${hasMore && index === 2 ? `<div class="media-count">+${mediaUrls.length - 3}</div>` : ''}
                         </div>
                     `;
-                } else if (['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) {
+                } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'amr'].includes(ext)) {
                     return `
                         <div class="media-preview">
                             <div class="media-icon">🎧</div>
-                            <audio controls style="position: absolute; bottom: 0; width: 100%; height: 30px;">
+                            <audio controls style="position: absolute; bottom: 0; width: 100%; height: 30px;" onerror="console.warn('Audio load failed:', '${escapeHtml(url)}')">
                                 <source src="${escapeHtml(url)}">
                             </audio>
                         </div>
                     `;
+                } else {
+                    return `
+                        <div class="media-preview" onclick="window.open('${escapeHtml(url)}', '_blank')">
+                            <div class="media-icon">📄</div>
+                        </div>
+                    `;
                 }
-                return `
-                    <div class="media-preview" onclick="window.open('${escapeHtml(url)}', '_blank')">
-                        <div class="media-icon">📄</div>
-                    </div>
-                `;
             }).filter(Boolean).join('')}
         </div>
     `;

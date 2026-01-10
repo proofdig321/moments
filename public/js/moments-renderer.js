@@ -188,6 +188,141 @@ function toggleMomentContent(button) {
     }
 }
 
+// Media rendering function for PWA
+function renderMedia(mediaUrls) {
+    if (!mediaUrls || mediaUrls.length === 0) return '';
+    
+    const mediaItems = mediaUrls.slice(0, 4); // Show max 4 items
+    const hasMore = mediaUrls.length > 4;
+    
+    return `
+        <div class="moment-media">
+            ${mediaItems.map((url, index) => {
+                if (!url || url.trim() === '') return '';
+                
+                const ext = url.split('.').pop()?.toLowerCase() || '';
+                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                    return `
+                        <div class="media-preview">
+                            <img src="${escapeHtml(url)}" alt="Moment image" onclick="openMedia('${escapeHtml(url)}')" onerror="this.parentElement.innerHTML='<div class=\"media-icon\">🖼️</div>'">
+                            ${hasMore && index === 3 ? `<div class="media-overlay">+${mediaUrls.length - 4}</div>` : ''}
+                        </div>
+                    `;
+                } else if (['mp4', 'webm', 'mov', '3gp'].includes(ext)) {
+                    return `
+                        <div class="media-preview">
+                            <video preload="metadata" onclick="openMedia('${escapeHtml(url)}')">
+                                <source src="${escapeHtml(url)}">
+                            </video>
+                            <div class="media-icon">▶️</div>
+                            ${hasMore && index === 3 ? `<div class="media-overlay">+${mediaUrls.length - 4}</div>` : ''}
+                        </div>
+                    `;
+                } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'amr'].includes(ext)) {
+                    return `
+                        <div class="media-preview">
+                            <div class="media-icon">🎧</div>
+                            <audio controls style="position: absolute; bottom: 0; width: 100%; height: 30px;">
+                                <source src="${escapeHtml(url)}">
+                            </audio>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="media-preview">
+                            <div class="media-icon">📄</div>
+                            <a href="${escapeHtml(url)}" target="_blank" style="position: absolute; inset: 0;"></a>
+                        </div>
+                    `;
+                }
+            }).filter(Boolean).join('')}
+        </div>
+    `;
+}
+
+// Comments rendering function for PWA
+function renderComments(comments) {
+    if (!comments || comments.length === 0) return '';
+    
+    return `
+        <div class="moment-comments">
+            <h4 class="comments-header">💬 Community Comments (${comments.length})</h4>
+            ${comments.slice(0, 3).map(comment => `
+                <div class="comment-item ${comment.featured ? 'featured' : ''}">
+                    <div class="comment-content">${escapeHtml(comment.content)}</div>
+                    <div class="comment-meta">
+                        <span class="comment-author">Community member</span>
+                        <span class="comment-time">${formatDate(comment.created_at)}</span>
+                        ${comment.reply_count > 0 ? `<span class="comment-replies">${comment.reply_count} replies</span>` : ''}
+                    </div>
+                </div>
+            `).join('')}
+            ${comments.length > 3 ? `
+                <div class="comments-more">
+                    <button class="expand-comments" onclick="loadMoreComments(this)" data-moment-id="${comments[0].moment_id}">
+                        View all ${comments.length} comments
+                    </button>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+// Sponsor branding function for PWA
+function renderSponsorBranding(sponsor, isSponsored) {
+    if (!isSponsored || !sponsor) return '';
+    
+    const logoHtml = sponsor.logo_url ? 
+        `<img src="${escapeHtml(sponsor.logo_url)}" alt="${escapeHtml(sponsor.display_name)} logo" style="height: 24px; width: auto; margin-right: 8px;" onerror="this.style.display='none'">` : '';
+    
+    return `
+        <div class="sponsor-branding" style="display: flex; align-items: center; margin-bottom: 12px; padding: 8px; background: #f8fafc; border-radius: 6px; border-left: 3px solid #fbbf24;">
+            ${logoHtml}
+            <span style="font-size: 0.75rem; color: #6b7280; font-weight: 500;">Sponsored by ${escapeHtml(sponsor.display_name)}</span>
+        </div>
+    `;
+}
+
+// Sponsor attribution function for PWA
+function renderSponsorAttribution(sponsor, isSponsored) {
+    if (!isSponsored || !sponsor) return '';
+    return `<span style="font-size: 0.75rem; color: #6b7280;">by ${escapeHtml(sponsor.display_name)}</span>`;
+}
+
+// Date formatting function
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    
+    return date.toLocaleDateString('en-ZA', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+    });
+}
+
+// HTML escaping function
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Make functions globally available
+window.renderMedia = renderMedia;
+window.renderComments = renderComments;
+window.renderSponsorBranding = renderSponsorBranding;
+window.renderSponsorAttribution = renderSponsorAttribution;
+window.formatDate = formatDate;
+window.escapeHtml = escapeHtml;
+
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { MomentsMarkdownRenderer, renderMomentContent };
+    module.exports = { MomentsMarkdownRenderer, renderMomentContent, renderMedia, renderComments };
 }

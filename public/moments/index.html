@@ -264,7 +264,7 @@
             if (!isSponsored || !sponsor) return '';
             
             const logoHtml = sponsor.logo_url ? 
-                `<img src="${escapeHtml(sponsor.logo_url)}" alt="${escapeHtml(sponsor.display_name)} logo" style="height: 24px; width: auto; margin-right: 8px;">` : '';
+                `<img src="${escapeHtml(sponsor.logo_url)}" alt="${escapeHtml(sponsor.display_name)} logo" style="height: 24px; width: auto; margin-right: 8px;" onerror="this.style.display='none'">` : '';
             
             return `
                 <div class="sponsor-branding" style="display: flex; align-items: center; margin-bottom: 12px; padding: 8px; background: #f8fafc; border-radius: 6px; border-left: 3px solid #fbbf24;">
@@ -288,25 +288,27 @@
             return `
                 <div class="moment-media">
                     ${mediaItems.map((url, index) => {
-                        const ext = url.split('.').pop().toLowerCase();
+                        if (!url || url.trim() === '') return '';
+                        
+                        const ext = url.split('.').pop()?.toLowerCase() || '';
                         if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
                             return `
                                 <div class="media-preview">
-                                    <img src="${escapeHtml(url)}" alt="Moment image" onclick="openMedia('${escapeHtml(url)}')">
+                                    <img src="${escapeHtml(url)}" alt="Moment image" onclick="openMedia('${escapeHtml(url)}')" onerror="this.parentElement.innerHTML='<div class=\"media-icon\">🖼️</div>'">
                                     ${hasMore && index === 3 ? `<div class="media-overlay">+${mediaUrls.length - 4}</div>` : ''}
                                 </div>
                             `;
-                        } else if (['mp4', 'webm', 'mov'].includes(ext)) {
+                        } else if (['mp4', 'webm', 'mov', '3gp'].includes(ext)) {
                             return `
                                 <div class="media-preview">
-                                    <video onclick="openMedia('${escapeHtml(url)}')">
+                                    <video preload="metadata" onclick="openMedia('${escapeHtml(url)}')">
                                         <source src="${escapeHtml(url)}">
                                     </video>
                                     <div class="media-icon">▶️</div>
                                     ${hasMore && index === 3 ? `<div class="media-overlay">+${mediaUrls.length - 4}</div>` : ''}
                                 </div>
                             `;
-                        } else if (['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) {
+                        } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'amr'].includes(ext)) {
                             return `
                                 <div class="media-preview">
                                     <div class="media-icon">🎧</div>
@@ -315,14 +317,15 @@
                                     </audio>
                                 </div>
                             `;
+                        } else {
+                            return `
+                                <div class="media-preview">
+                                    <div class="media-icon">📄</div>
+                                    <a href="${escapeHtml(url)}" target="_blank" style="position: absolute; inset: 0;"></a>
+                                </div>
+                            `;
                         }
-                        return `
-                            <div class="media-preview">
-                                <div class="media-icon">📄</div>
-                                <a href="${escapeHtml(url)}" target="_blank" style="position: absolute; inset: 0;"></a>
-                            </div>
-                        `;
-                    }).join('')}
+                    }).filter(Boolean).join('')}
                 </div>
             `;
         }

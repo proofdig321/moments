@@ -220,7 +220,15 @@ async function storeMediaRecord({ messageId, mediaId, mediaType, mediaInfo, file
 async function getPublicUrl(bucket, filePath) {
   try {
     const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
-    return data.publicUrl;
+    
+    // Validate the URL is accessible
+    if (data?.publicUrl) {
+      console.log(`Generated public URL: ${data.publicUrl}`);
+      return data.publicUrl;
+    }
+    
+    console.warn('No public URL generated for:', { bucket, filePath });
+    return null;
   } catch (error) {
     console.warn('Could not generate public URL:', error.message);
     return null;
