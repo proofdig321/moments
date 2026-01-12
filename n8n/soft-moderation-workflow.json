@@ -1,0 +1,200 @@
+{
+  "name": "Automated Soft Moderation",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": "*",
+              "minute": "*/5"
+            }
+          ]
+        }
+      },
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "POST",
+        "url": "={{$env.SUPABASE_URL}}/rpc/process_auto_approval_queue",
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "bodyParametersJson": "{}"
+      },
+      "name": "Process Auto Approval Queue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "Messages Processed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "GET",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/moments?status=eq.broadcasted&created_by=eq.auto_moderation&created_at=gte.{{new Date(Date.now() - 5*60*1000).toISOString()}}&select=id,title,content,region,category",
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_SERVICE_KEY}}"
+            }
+          ]
+        }
+      },
+      "name": "Get New Auto-Approved Moments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "mode": "splitInBatches",
+        "batchSize": 1
+      },
+      "name": "Split Moments",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "POST",
+        "url": "={{$env.SUPABASE_URL}}/functions/v1/handleMomentCreated",
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "bodyParametersJson": "={{ JSON.stringify({ moment: { id: $json.id, title: $json.title, content: $json.content, region: $json.region, category: $json.category, publish_to_pwa: true, publish_to_whatsapp: false } }) }}"
+      },
+      "name": "Create Moment Intents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log processing results\nconst processedCount = $items('Process Auto Approval Queue')[0].json;\nconst newMoments = $items('Get New Auto-Approved Moments');\n\nconsole.log(`🤖 Soft Moderation Results:`);\nconsole.log(`   Messages processed: ${processedCount}`);\nconsole.log(`   New moments created: ${newMoments.length}`);\n\nif (newMoments.length > 0) {\n  console.log(`   Moment IDs: ${newMoments.map(m => m.json.id).join(', ')}`);\n}\n\nreturn [{ json: { processed: processedCount, moments: newMoments.length, timestamp: new Date().toISOString() } }];"
+      },
+      "name": "Log Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1560, 200]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Process Auto Approval Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Auto Approval Queue": {
+      "main": [
+        [
+          {
+            "node": "Messages Processed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Messages Processed?": {
+      "main": [
+        [
+          {
+            "node": "Get New Auto-Approved Moments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get New Auto-Approved Moments": {
+      "main": [
+        [
+          {
+            "node": "Split Moments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Moments": {
+      "main": [
+        [
+          {
+            "node": "Create Moment Intents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Moment Intents": {
+      "main": [
+        [
+          {
+            "node": "Log Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

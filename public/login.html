@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Unami Foundation Moments</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="stylesheet" href="/css/design-system.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* Navigation */
+        .nav { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+        .nav-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        .nav-logo { font-size: 1.5rem; font-weight: bold; color: #2563eb; text-decoration: none; }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a { text-decoration: none; color: #374151; font-weight: 500; transition: color 0.2s; }
+        .nav-links a:hover { color: #2563eb; }
+        .nav-toggle { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-top: 60px;
+        }
+        .login-container {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            margin: 1rem;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .logo img {
+            height: 60px;
+            margin-bottom: 1rem;
+        }
+        .logo h1 {
+            color: #1f2937;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .logo p {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #374151;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .btn {
+            width: 100%;
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn:hover {
+            background: #1d4ed8;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .error {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+        .loading {
+            text-align: center;
+            color: #6b7280;
+            margin-top: 1rem;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: #6b7280;
+            font-size: 0.75rem;
+        }
+        
+        @media (max-width: 768px) {
+            .nav-container { padding: 0 15px; }
+            .nav-links { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; flex-direction: column; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .nav-links.active { display: flex; }
+            .nav-toggle { display: block; }
+            .login-container { margin: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">🌍 Unami Moments</a>
+            <div class="nav-links" id="nav-links">
+                <a href="/">Home</a>
+                <a href="/moments">Community</a>
+                <a href="https://wa.me/27658295041?text=START" target="_blank">Join WhatsApp</a>
+                <a href="/admin-dashboard.html">Admin</a>
+            </div>
+            <button class="nav-toggle" id="nav-toggle">☰</button>
+        </div>
+    </nav>
+
+    <div class="login-container">
+        <div class="logo">
+            <img src="/logo.png" alt="Unami Foundation" onerror="this.style.display='none'">
+            <h1>🌍 Moments Admin</h1>
+            <p>Unami Foundation Community Platform</p>
+        </div>
+        
+        <div id="error-message"></div>
+        
+        <form id="login-form">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" required placeholder="admin@example.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="Enter your password">
+            </div>
+            
+            <button type="submit" class="btn" id="login-btn">
+                Sign In
+            </button>
+        </form>
+        
+        <div id="loading" class="loading" style="display: none;">
+            Signing in...
+        </div>
+        
+        <div class="footer">
+            <p>© 2024 Unami Foundation. Secure admin access.</p>
+        </div>
+    </div>
+
+    <script>
+        // Admin authentication using Supabase admin-api function
+        async function authenticateAdmin(email, password) {
+            const response = await fetch('https://arqeiadudzwbmzdhqkit.supabase.co/functions/v1/admin-api', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFycWVpYWR1ZHp3Ym16ZGhxa2l0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjIxODU5OCwiZXhwIjoyMDgxNzk0NTk4fQ.WyolKqTVdblr1r8eCjOOaBuMq2uLAJIM_0YC3n3M7s8'
+                },
+                body: JSON.stringify({ email, password })
+            });
+            return await response.json();
+        }
+        
+        function sanitizeInput(input) {
+            if (typeof input !== 'string') return '';
+            return input.trim().replace(/[<>"'&]/g, function(match) {
+                const escapeMap = {
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#x27;',
+                    '&': '&amp;'
+                };
+                return escapeMap[match];
+            });
+        }
+        
+        function validateEmail(email) {
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            return emailRegex.test(email) && email.length <= 254;
+        }
+        
+        function validatePassword(password) {
+            return password.length >= 8 && password.length <= 128;
+        }
+        
+        function showError(message) {
+            const sanitized = sanitizeInput(message);
+            document.getElementById('error-message').innerHTML = `<div class="error">${sanitized}</div>`;
+        }
+        
+        function clearError() {
+            document.getElementById('error-message').innerHTML = '';
+        }
+        
+        function setLoading(loading) {
+            const form = document.getElementById('login-form');
+            const loadingDiv = document.getElementById('loading');
+            const btn = document.getElementById('login-btn');
+            
+            if (loading) {
+                form.style.display = 'none';
+                loadingDiv.style.display = 'block';
+                btn.disabled = true;
+            } else {
+                form.style.display = 'block';
+                loadingDiv.style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Mobile navigation toggle
+            document.getElementById('nav-toggle').addEventListener('click', () => {
+                document.getElementById('nav-links').classList.toggle('active');
+            });
+            
+            // Close mobile nav when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.nav')) {
+                    document.getElementById('nav-links').classList.remove('active');
+                }
+            });
+            
+            const form = document.getElementById('login-form');
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                clearError();
+                setLoading(true);
+                
+                const formData = new FormData(e.target);
+                const rawEmail = formData.get('email');
+                const rawPassword = formData.get('password');
+                
+                try {
+                    // Input validation and sanitization
+                    const email = sanitizeInput(rawEmail);
+                    const password = sanitizeInput(rawPassword);
+                    
+                    // Validate inputs
+                    if (!validateEmail(email)) {
+                        throw new Error('Please enter a valid email address');
+                    }
+                    
+                    if (!validatePassword(password)) {
+                        throw new Error('Password must be between 8-128 characters');
+                    }
+                    
+                    // Sign in with admin API
+                    const result = await authenticateAdmin(email, password);
+                    
+                    if (result.error) {
+                        throw new Error(result.error);
+                    }
+                    
+                    if (result.success && result.token) {
+                        localStorage.setItem('admin.auth.token', result.token);
+                        localStorage.setItem('admin.user.info', JSON.stringify(result.user));
+                        window.location.href = '/admin-dashboard.html';
+                    } else {
+                        throw new Error('Login failed - invalid credentials');
+                    }
+                    
+                } catch (error) {
+                    // Generic error message to prevent information disclosure
+                    let userMessage = 'Login failed. Please check your credentials.';
+                    
+                    // Only show specific errors for certain cases
+                    if (error.message.includes('Invalid login credentials')) {
+                        userMessage = 'Invalid email or password';
+                    } else if (error.message.includes('Email not confirmed')) {
+                        userMessage = 'Please check your email and confirm your account';
+                    } else if (error.message.includes('Too many requests')) {
+                        userMessage = 'Too many login attempts. Please try again later';
+                    } else if (error.message.includes('valid email') || error.message.includes('Password must be')) {
+                        userMessage = error.message;
+                    }
+                    
+                    showError(userMessage);
+                    setLoading(false);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

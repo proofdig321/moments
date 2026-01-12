@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "src/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/webhook",
+      "dest": "https://bxmdzxejcxbinghtytfw.supabase.co/functions/v1/webhook"
+    },
+    {
+      "src": "/api/admin/login",
+      "dest": "https://bxmdzxejcxbinghtytfw.supabase.co/functions/v1/admin-api"
+    },
+    {
+      "src": "/admin/(.*)",
+      "dest": "https://bxmdzxejcxbinghtytfw.supabase.co/functions/v1/admin-api/$1"
+    },
+    {
+      "src": "/moments/(.*)",
+      "dest": "/public/moments/$1"
+    },
+    {
+      "src": "/moments",
+      "dest": "/public/moments/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/src/server.js"
+    }
+  ]
+}

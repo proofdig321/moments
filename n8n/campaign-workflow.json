@@ -1,0 +1,283 @@
+{
+  "name": "Campaign Management Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "campaign-webhook",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-campaign",
+      "name": "Campaign Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.action}}",
+              "operation": "equal",
+              "value2": "created"
+            }
+          ]
+        }
+      },
+      "id": "if-campaign-created",
+      "name": "If Campaign Created",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.MCP_ENDPOINT}}/advisory",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{$json.campaign.content}}"
+            },
+            {
+              "name": "title", 
+              "value": "={{$json.campaign.title}}"
+            },
+            {
+              "name": "type",
+              "value": "sponsored_content"
+            }
+          ]
+        }
+      },
+      "id": "mcp-screening",
+      "name": "MCP Content Screening",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.confidence}}",
+              "operation": "smaller",
+              "value2": 0.7
+            }
+          ]
+        }
+      },
+      "id": "if-safe-content",
+      "name": "If Safe Content",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.RAILWAY_API_URL}}/admin/campaigns/{{$json.campaign.id}}/approve",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.ADMIN_TOKEN}}"
+            }
+          ]
+        }
+      },
+      "id": "auto-approve",
+      "name": "Auto Approve Campaign",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1120, 100]
+    },
+    {
+      "parameters": {
+        "to": "admin@unamifoundation.org",
+        "subject": "Campaign Requires Manual Review",
+        "text": "Campaign '{{$json.campaign.title}}' requires manual review.\nConfidence: {{$json.confidence}}\nReason: High risk content detected"
+      },
+      "id": "notify-admin",
+      "name": "Notify Admin for Review",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.action}}",
+              "operation": "equal", 
+              "value2": "scheduled"
+            }
+          ]
+        }
+      },
+      "id": "if-scheduled",
+      "name": "If Scheduled Campaign",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 500]
+    },
+    {
+      "parameters": {
+        "unit": "minutes",
+        "amount": "={{Math.max(1, Math.floor((new Date($json.campaign.scheduled_at) - new Date()) / 60000))}}"
+      },
+      "id": "wait-for-schedule",
+      "name": "Wait for Scheduled Time",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [680, 500]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.RAILWAY_API_URL}}/admin/campaigns/{{$json.campaign.id}}/publish",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.ADMIN_TOKEN}}"
+            }
+          ]
+        }
+      },
+      "id": "publish-campaign",
+      "name": "Publish Campaign",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"processed\", \"campaign_id\": \"{{$json.campaign.id}}\"}"
+      },
+      "id": "response",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Campaign Webhook": {
+      "main": [
+        [
+          {
+            "node": "If Campaign Created",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If Scheduled Campaign", 
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Campaign Created": {
+      "main": [
+        [
+          {
+            "node": "MCP Content Screening",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Content Screening": {
+      "main": [
+        [
+          {
+            "node": "If Safe Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Safe Content": {
+      "main": [
+        [
+          {
+            "node": "Auto Approve Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Admin for Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Scheduled Campaign": {
+      "main": [
+        [
+          {
+            "node": "Wait for Scheduled Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Scheduled Time": {
+      "main": [
+        [
+          {
+            "node": "Publish Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto Approve Campaign": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Admin for Review": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish Campaign": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

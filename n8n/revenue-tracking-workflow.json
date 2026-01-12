@@ -1,0 +1,148 @@
+{
+  "name": "Revenue Tracking & Campaign Optimization",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "revenue-webhook",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-revenue",
+      "name": "Revenue Event Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "revenue_events",
+        "columns": "campaign_id,sponsor_id,event_type,revenue_amount,user_phone,metadata"
+      },
+      "id": "insert-revenue",
+      "name": "Insert Revenue Event",
+      "type": "n8n-nodes-base.supabase",
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": "campaign_budgets",
+        "updateKey": "campaign_id",
+        "columns": "revenue_generated=revenue_generated+{{$json.revenue_amount}}"
+      },
+      "id": "update-budget",
+      "name": "Update Campaign Revenue",
+      "type": "n8n-nodes-base.supabase",
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.revenue_generated}}",
+              "operation": "larger",
+              "value2": "={{$json.total_budget * 1.5}}"
+            }
+          ]
+        }
+      },
+      "id": "check-roi",
+      "name": "Check ROI Threshold",
+      "type": "n8n-nodes-base.if",
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/functions/v1/mcp-optimizer",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "campaignId",
+              "value": "={{$json.campaign_id}}"
+            }
+          ]
+        }
+      },
+      "id": "trigger-optimization",
+      "name": "Trigger MCP Optimization",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"success\", \"revenue_tracked\": true}"
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Revenue Event Webhook": {
+      "main": [
+        [
+          {
+            "node": "Insert Revenue Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Revenue Event": {
+      "main": [
+        [
+          {
+            "node": "Update Campaign Revenue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Campaign Revenue": {
+      "main": [
+        [
+          {
+            "node": "Check ROI Threshold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check ROI Threshold": {
+      "main": [
+        [
+          {
+            "node": "Trigger MCP Optimization",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger MCP Optimization": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,18 @@
+<!-- Swipe cards demo for mobile-first admin review -->
+<style>
+  .card{width:90%;margin:12px auto;padding:16px;border-radius:8px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  .stack{touch-action:none}
+</style>
+<div class="stack" id="stack">
+  <div class="card">Card 1</div>
+  <div class="card">Card 2</div>
+  <div class="card">Card 3</div>
+</div>
+<script>
+  let startX=0, el=document.getElementById('stack');
+  el.addEventListener('pointerdown', e=>startX=e.clientX);
+  el.addEventListener('pointerup', e=>{
+    if(e.clientX - startX > 60) alert('Accepted');
+    else if(e.clientX - startX < -60) alert('Rejected');
+  });
+</script>

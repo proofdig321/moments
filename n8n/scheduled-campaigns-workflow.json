@@ -1,0 +1,208 @@
+{
+  "name": "Scheduled Campaign Processor",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": "*",
+              "minute": "*/5"
+            }
+          ]
+        }
+      },
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "GET",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/campaigns?status=eq.approved&scheduled_at=lte.{{new Date().toISOString()}}&select=*",
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_SERVICE_KEY}}"
+            }
+          ]
+        }
+      },
+      "name": "Get Scheduled Campaigns",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.length}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "Has Campaigns?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "mode": "splitInBatches",
+        "batchSize": 1
+      },
+      "name": "Split Campaigns",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "POST",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/moments",
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "bodyParametersJson": "={{ JSON.stringify({ title: $json.title, content: $json.content, region: ($json.target_regions && $json.target_regions.length > 0) ? $json.target_regions[0] : 'National', category: ($json.target_categories && $json.target_categories.length > 0) ? $json.target_categories[0] : 'Sponsored', language: 'eng', sponsor_id: $json.sponsor_id, is_sponsored: true, media_urls: $json.media_urls || [], status: 'broadcasted', broadcasted_at: new Date().toISOString(), content_source: 'campaign', publish_to_pwa: true, publish_to_whatsapp: true, created_by: 'scheduled_campaign' }) }}"
+      },
+      "name": "Create Moment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/campaigns?id=eq.{{$json.id}}",
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "bodyParametersJson": "={{ JSON.stringify({ status: 'published', updated_at: new Date().toISOString() }) }}"
+      },
+      "name": "Mark Campaign Published",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log campaign processing results\nconst campaigns = $items('Get Scheduled Campaigns');\nconst processedCount = campaigns.length;\n\nconsole.log(`📅 Scheduled Campaign Processing:`);\nconsole.log(`   Campaigns processed: ${processedCount}`);\n\nif (processedCount > 0) {\n  const campaignIds = campaigns.map(c => c.json.id);\n  console.log(`   Campaign IDs: ${campaignIds.join(', ')}`);\n}\n\nreturn [{ json: { processed: processedCount, timestamp: new Date().toISOString() } }];"
+      },
+      "name": "Log Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1560, 200]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Get Scheduled Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Scheduled Campaigns": {
+      "main": [
+        [
+          {
+            "node": "Has Campaigns?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Campaigns?": {
+      "main": [
+        [
+          {
+            "node": "Split Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Campaigns": {
+      "main": [
+        [
+          {
+            "node": "Create Moment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Moment": {
+      "main": [
+        [
+          {
+            "node": "Mark Campaign Published",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Campaign Published": {
+      "main": [
+        [
+          {
+            "node": "Log Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "name": "Unami Foundation Moments",
+  "short_name": "Unami Moments",
+  "description": "100% WhatsApp-native community engagement platform for South Africa",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "categories": ["social", "news", "lifestyle"],
+  "lang": "en-ZA",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/logo.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "View Moments",
+      "short_name": "Moments",
+      "description": "Browse community moments",
+      "url": "/moments",
+      "icons": [{
+        "src": "/logo.png",
+        "sizes": "96x96"
+      }]
+    },
+    {
+      "name": "Broadcasts",
+      "short_name": "Broadcasts",
+      "description": "View broadcast history",
+      "url": "/broadcasts",
+      "icons": [{
+        "src": "/logo.png",
+        "sizes": "96x96"
+      }]
+    },
+    {
+      "name": "Settings",
+      "short_name": "Settings",
+      "description": "Manage preferences",
+      "url": "/settings",
+      "icons": [{
+        "src": "/logo.png",
+        "sizes": "96x96"
+      }]
+    }
+  ]
+}

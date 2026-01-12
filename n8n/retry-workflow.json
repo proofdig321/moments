@@ -1,0 +1,198 @@
+{
+  "name": "WhatsApp Retry & Fallback",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/messages?processed=eq.false&select=*",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_SERVICE_KEY}}"
+            }
+          ]
+        }
+      },
+      "id": "get-unprocessed",
+      "name": "Get Unprocessed Messages",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.length}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "has-messages",
+      "name": "Has Messages?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.PROCESSING_ENDPOINT}}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "internalApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Internal-Secret",
+              "value": "={{$env.INTERNAL_WEBHOOK_SECRET}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "entry",
+              "value": "=[{\"changes\": [{\"value\": {\"messages\": [{{$json}}]}}]}]"
+            }
+          ]
+        }
+      },
+      "id": "retry-processing",
+      "name": "Retry Processing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/flags",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SERVICE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_SERVICE_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message_id",
+              "value": "={{$json.id}}"
+            },
+            {
+              "name": "flag_type",
+              "value": "retry_attempted"
+            },
+            {
+              "name": "severity",
+              "value": "low"
+            },
+            {
+              "name": "action_taken",
+              "value": "retried"
+            },
+            {
+              "name": "notes",
+              "value": "Automatic retry processing"
+            }
+          ]
+        }
+      },
+      "id": "log-retry",
+      "name": "Log Retry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Get Unprocessed Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Unprocessed Messages": {
+      "main": [
+        [
+          {
+            "node": "Has Messages?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Messages?": {
+      "main": [
+        [
+          {
+            "node": "Retry Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Processing": {
+      "main": [
+        [
+          {
+            "node": "Log Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "1"
+}
