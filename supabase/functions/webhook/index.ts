@@ -114,6 +114,7 @@ serve(async (req) => {
       // Use multiple possible verify tokens for production
       const validTokens = [
         Deno.env.get('WEBHOOK_VERIFY_TOKEN'),
+        'whatsapp_gateway_verify_2024_secure',
         'unami_moments_webhook_2024',
         'moments_verify_token'
       ].filter(Boolean)
