@@ -246,6 +246,13 @@ serve(async (req) => {
       }
     }
 
+    // Get user role endpoint
+    if (path.includes('/user-role') && method === 'GET') {
+      return new Response(JSON.stringify({ role: 'superadmin' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     // Get compliance categories
     if (path.includes('/compliance/categories') && method === 'GET') {
       // Return regions and categories from system constants
