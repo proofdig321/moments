@@ -222,7 +222,7 @@
         
         async function loadStats() {
             try {
-                const response = await fetch('/api/stats');
+                const response = await fetch('https://bxmdzcxejcxbinghtyfw.supabase.co/functions/v1/admin-api/analytics');
                 const stats = await response.json();
                 
                 document.getElementById('total-moments').textContent = stats.totalMoments || 0;
@@ -230,18 +230,9 @@
                 document.getElementById('total-broadcasts').textContent = stats.totalBroadcasts || 0;
             } catch (error) {
                 console.error('Failed to load stats:', error);
-                // Try public API fallback
-                try {
-                    const response = await fetch('https://bxmdzcxejcxbinghtyfw.supabase.co/functions/v1/public-api/stats');
-                    const stats = await response.json();
-                    document.getElementById('total-moments').textContent = stats.totalMoments || 0;
-                    document.getElementById('active-subscribers').textContent = stats.activeSubscribers || 0;
-                    document.getElementById('total-broadcasts').textContent = stats.totalBroadcasts || 0;
-                } catch (fallbackError) {
-                    document.getElementById('total-moments').textContent = '-';
-                    document.getElementById('active-subscribers').textContent = '-';
-                    document.getElementById('total-broadcasts').textContent = '-';
-                }
+                document.getElementById('total-moments').textContent = '0';
+                document.getElementById('active-subscribers').textContent = '0';
+                document.getElementById('total-broadcasts').textContent = '0';
             }
         }
 
@@ -251,17 +242,11 @@
                 if (currentFilters.region) params.append('region', currentFilters.region);
                 if (currentFilters.category) params.append('category', currentFilters.category);
                 if (currentFilters.source) params.append('source', currentFilters.source);
+                params.append('status', 'broadcasted'); // Only show broadcasted moments
                 
-                const response = await fetch(`/api/moments?${params}`);
-                if (!response.ok) {
-                    // Try public API fallback
-                    const fallbackResponse = await fetch(`https://bxmdzcxejcxbinghtyfw.supabase.co/functions/v1/public-api/moments?${params}`);
-                    const data = await fallbackResponse.json();
-                    displayMoments(data.moments || []);
-                } else {
-                    const data = await response.json();
-                    displayMoments(data.moments || []);
-                }
+                const response = await fetch(`https://bxmdzcxejcxbinghtyfw.supabase.co/functions/v1/admin-api/moments?${params}`);
+                const data = await response.json();
+                displayMoments(data.moments || []);
             } catch (error) {
                 console.error('Failed to load moments:', error);
                 document.getElementById('moments-container').innerHTML = 

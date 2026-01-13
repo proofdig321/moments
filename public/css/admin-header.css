@@ -51,13 +51,14 @@
 }
 
 .admin-user-info {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     opacity: 0.9;
     text-align: right;
+    line-height: 1.2;
 }
 
 .admin-user-role {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     opacity: 0.7;
     display: block;
 }
