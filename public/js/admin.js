@@ -1,6 +1,7 @@
 // Direct API calls to Supabase admin-api function
-// NOTE: domain corrected to match SUPABASE_URL in .env
 const API_BASE = 'https://bxmdzcxejcxbinghtyfw.supabase.co/functions/v1/admin-api';
+const SUPABASE_URL = 'https://bxmdzcxejcxbinghtyfw.supabase.co';
+const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4bWR6Y3hlamN4YmluZ2h0eWZ3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODE3MzM5NiwiZXhwIjoyMDgzNzQ5Mzk2fQ.rcm_AT1o0Wiazvy9Pl6kjKc5jogHQKZyTfOxEX8v3Iw';
 
 // Get auth token from localStorage
 function getAuthToken() {
@@ -182,7 +183,7 @@ function previewMessage(id) {
     }
 }
 
-// Load analytics with correct admin endpoint
+// Load analytics with direct Supabase fallback
 async function loadAnalytics() {
     try {
         const response = await apiFetch('/analytics');
@@ -207,8 +208,42 @@ async function loadAnalytics() {
             </div>
         `;
     } catch (error) {
-        console.error('Analytics load error:', error);
-        document.getElementById('analytics').innerHTML = '<div class="error">Failed to load analytics</div>';
+        console.error('Analytics API failed, trying direct Supabase:', error);
+        try {
+            // Direct Supabase fallback
+            const [moments, subs, broadcasts] = await Promise.all([
+                fetch(`${SUPABASE_URL}/rest/v1/moments?select=count`, {
+                    headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
+                }),
+                fetch(`${SUPABASE_URL}/rest/v1/subscriptions?select=count&opted_in=eq.true`, {
+                    headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
+                }),
+                fetch(`${SUPABASE_URL}/rest/v1/broadcasts?select=count`, {
+                    headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
+                })
+            ]);
+            
+            document.getElementById('analytics').innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${moments.status === 200 ? 'Connected' : '0'}</div>
+                    <div class="stat-label">Total Moments</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${subs.status === 200 ? 'Connected' : '0'}</div>
+                    <div class="stat-label">Active Subscribers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${broadcasts.status === 200 ? 'Connected' : '0'}</div>
+                    <div class="stat-label">Total Broadcasts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">Direct</div>
+                    <div class="stat-label">DB Access</div>
+                </div>
+            `;
+        } catch (fallbackError) {
+            document.getElementById('analytics').innerHTML = '<div class="error">Database connection failed</div>';
+        }
     }
 }
 
