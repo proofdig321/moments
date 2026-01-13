@@ -1,5 +1,6 @@
 // Direct API calls to Supabase admin-api function
-const API_BASE = 'https://arqeiadudzwbmzdhqkit.supabase.co/functions/v1/admin-api';
+// NOTE: domain corrected to match SUPABASE_URL in .env
+const API_BASE = 'https://bxmdzcxejcxbinghtyfw.supabase.co/functions/v1/admin-api';
 
 // Get auth token from localStorage
 function getAuthToken() {
