@@ -121,6 +121,22 @@ app.use('/admin', csrfMiddleware, adminRoutes);
 app.use('/public', publicRoutes);
 
 // API aliases for frontend compatibility
+app.use('/api', (req, res, next) => {
+  // Proxy to public-api function for stats and moments
+  if (req.path === '/stats' || req.path === '/moments') {
+    const proxyUrl = `https://bxmdzcxejcxbinghtyfw.supabase.co/functions/v1/public-api${req.path}${req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''}`;
+    
+    fetch(proxyUrl)
+      .then(response => response.json())
+      .then(data => res.json(data))
+      .catch(error => {
+        console.error('Proxy error:', error);
+        res.status(500).json({ error: 'Service unavailable' });
+      });
+  } else {
+    next();
+  }
+});
 app.use('/api', publicRoutes);
 
 // Health check
