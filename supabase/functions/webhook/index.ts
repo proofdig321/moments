@@ -13,6 +13,57 @@ function isRegionSelection(text: string): boolean {
   return words.length > 0 && words.every(word => validRegions.includes(word.toLowerCase()))
 }
 
+function isCategorySelection(text: string): boolean {
+  const validCategories = ['edu', 'saf', 'cul', 'opp', 'eve', 'hea', 'tec', 'com', 'all']
+  const words = text.split(/\s+/)
+  return words.length > 0 && words.every(word => validCategories.includes(word.toLowerCase()))
+}
+
+async function handleCategorySelection(phoneNumber: string, categoryString: string, supabase: any) {
+  try {
+    const categoryCodes = categoryString.toUpperCase().split(/\s+/)
+    const categoryMap: { [key: string]: string } = {
+      'EDU': 'Education',
+      'SAF': 'Safety', 
+      'CUL': 'Culture',
+      'OPP': 'Opportunity',
+      'EVE': 'Events',
+      'HEA': 'Health',
+      'TEC': 'Technology',
+      'COM': 'Community'
+    }
+    
+    let selectedCategories: string[]
+    if (categoryCodes.includes('ALL')) {
+      selectedCategories = Object.values(categoryMap)
+    } else {
+      selectedCategories = categoryCodes.map(code => categoryMap[code]).filter(Boolean)
+    }
+    
+    if (selectedCategories.length === 0) {
+      await sendWhatsAppMessage(phoneNumber, '❌ Invalid category codes. Reply INTERESTS to see valid options.')
+      return
+    }
+    
+    await supabase
+      .from('subscriptions')
+      .upsert({
+        phone_number: phoneNumber,
+        categories: selectedCategories,
+        last_activity: new Date().toISOString(),
+        opted_in: true
+      }, { onConflict: 'phone_number' })
+    
+    const confirmMessage = `✅ Interests updated!\n\nYou'll now receive updates about:\n${selectedCategories.map(cat => `🎯 ${cat}`).join('\n')}\n\n💬 Submit moments by messaging here\n🌐 Browse all: moments.unamifoundation.org/moments`
+    
+    await sendWhatsAppMessage(phoneNumber, confirmMessage)
+    console.log(`User ${phoneNumber} updated categories to: ${selectedCategories.join(', ')}`)
+  } catch (error) {
+    console.error('Category selection error:', error)
+    await sendWhatsAppMessage(phoneNumber, '❌ Error updating interests. Please try again or contact support.')
+  }
+}
+
 async function handleRegionSelection(phoneNumber: string, regionString: string, supabase: any) {
   try {
     const regionCodes = regionString.toUpperCase().split(/\s+/)
@@ -215,8 +266,8 @@ serve(async (req) => {
               
               console.log('User unsubscribed with confirmation:', message.from)
             } else if (['help', 'info', 'menu', '?'].includes(text)) {
-              // Help command with all available commands
-              const helpMsg = `📡 Community Signal Service Commands:\n\n🔄 START - Subscribe to community signals\n🛑 STOP - Unsubscribe from signals\n❓ HELP - Show this help menu\n📍 REGIONS - Choose your areas\n\n🌍 Available Regions:\nKZN, WC, GP, EC, FS, LP, MP, NC, NW\n\n💬 Submit moments by messaging here\n🌐 Full community feed: moments.unamifoundation.org/moments\n\nThis is YOUR community sharing platform.`
+              // Enhanced help command with all system commands
+              const helpMsg = `📡 Unami Foundation Moments - Command Guide\n\n🔄 START/JOIN - Subscribe to community updates\n🛑 STOP/UNSUBSCRIBE - Unsubscribe from updates\n❓ HELP/INFO - Show this command guide\n📍 REGIONS - Choose your areas of interest\n🏷️ INTERESTS - Manage content categories\n\n🌍 Available Regions:\nKZN (KwaZulu-Natal), WC (Western Cape)\nGP (Gauteng), EC (Eastern Cape)\nFS (Free State), LP (Limpopo)\nMP (Mpumalanga), NC (Northern Cape)\nNW (North West)\n\n📱 How to use:\n• Send any message to share with community\n• Reply with region codes: "KZN WC GP"\n• All content is moderated for safety\n\n🌐 Web: moments.unamifoundation.org\n📧 Support: info@unamifoundation.org\n\nYour community sharing platform 🇿🇦`
               await sendWhatsAppMessage(message.from, helpMsg)
               
               console.log('Help sent to:', message.from)
@@ -226,10 +277,20 @@ serve(async (req) => {
               await sendWhatsAppMessage(message.from, regionsMsg)
               
               console.log('Regions sent to:', message.from)
+            } else if (['interests', 'categories', 'topics'].includes(text)) {
+              // Interests/Categories command
+              const interestsMsg = `🏷️ Choose your interests (reply with category codes):\n\n🎓 EDU - Education & Learning\n🛡️ SAF - Safety & Security\n🎭 CUL - Culture & Arts\n💼 OPP - Opportunities & Jobs\n🎉 EVE - Events & Gatherings\n⚕️ HEA - Health & Wellness\n📱 TEC - Technology & Digital\n🏠 COM - Community News\n\nReply with codes like: EDU SAF OPP\nOr reply ALL for everything`
+              await sendWhatsAppMessage(message.from, interestsMsg)
+              
+              console.log('Interests sent to:', message.from)
             } else if (isRegionSelection(text)) {
               // Handle region selection
               await handleRegionSelection(message.from, text, supabase)
               console.log('Region selection processed for:', message.from)
+            } else if (isCategorySelection(text)) {
+              // Handle category selection
+              await handleCategorySelection(message.from, text, supabase)
+              console.log('Category selection processed for:', message.from)
             } else {
               // Process as community content with Supabase MCP
               try {
