@@ -35,7 +35,7 @@ let confirmCallback = null;
 // Navigation
 function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.admin-nav-item').forEach(b => b.classList.remove('active'));
     document.getElementById(sectionId).classList.add('active');
     
     const navButton = document.querySelector(`[data-section="${sectionId}"]`);
