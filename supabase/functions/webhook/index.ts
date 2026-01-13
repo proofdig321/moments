@@ -237,7 +237,7 @@ serve(async (req) => {
               }
               
               // WhatsApp compliant welcome message
-              const welcomeMsg = `🌟 Welcome to Unami Foundation Moments!\n\nYou'll receive community updates and opportunities across South Africa.\n\nCommands:\n• HELP - Show options\n• STOP - Unsubscribe\n\n🌐 More: moments.unamifoundation.org/moments`
+              const welcomeMsg = `🌟 Welcome to Unami Foundation Moments!\n\nYou'll receive community updates and opportunities across South Africa.\n\n📝 What qualifies as a moment:\n• Local opportunities & events\n• Safety alerts & community news\n• Educational resources & workshops\n• Cultural celebrations & initiatives\n\nCommands:\n• HELP - Show all options\n• MOMENTS - Learn about sharing\n• REGIONS - Choose your areas\n• INTERESTS - Select categories\n• STOP - Unsubscribe\n\n🌐 More: moments.unamifoundation.org/moments`
               await sendWhatsAppMessage(message.from, welcomeMsg)
               
               console.log('User subscribed and welcomed:', message.from)
@@ -265,6 +265,12 @@ serve(async (req) => {
               await sendWhatsAppMessage(message.from, goodbyeMsg)
               
               console.log('User unsubscribed with confirmation:', message.from)
+            } else if (['moments', 'share', 'submit'].includes(text)) {
+              // New MOMENTS command - explain what qualifies
+              const momentsMsg = `📝 Share Your Community Moments\n\n✅ What we welcome:\n🏫 Local education & training opportunities\n🛡️ Safety alerts & community warnings\n🎭 Cultural events & celebrations\n💼 Job opportunities & skills programs\n🏥 Health services & wellness events\n🌱 Environmental & sustainability initiatives\n\n❌ What we don't accept:\n• Political campaigns or endorsements\n• Financial products or investments\n• Medical advice or treatments\n• Gambling or betting content\n• Personal disputes or complaints\n\n📱 How to share: Simply message us your community update and we'll review it for publication.\n\n🌐 View all: moments.unamifoundation.org/moments`
+              await sendWhatsAppMessage(message.from, momentsMsg)
+              
+              console.log('Moments guide sent to:', message.from)
             } else if (['help', 'info', 'menu', '?'].includes(text)) {
               // Enhanced help command with all system commands
               const helpMsg = `📡 Unami Foundation Moments - Command Guide\n\n🔄 START/JOIN - Subscribe to community updates\n🛑 STOP/UNSUBSCRIBE - Unsubscribe from updates\n❓ HELP/INFO - Show this command guide\n📍 REGIONS - Choose your areas of interest\n🏷️ INTERESTS - Manage content categories\n\n🌍 Available Regions:\nKZN (KwaZulu-Natal), WC (Western Cape)\nGP (Gauteng), EC (Eastern Cape)\nFS (Free State), LP (Limpopo)\nMP (Mpumalanga), NC (Northern Cape)\nNW (North West)\n\n📱 How to use:\n• Send any message to share with community\n• Reply with region codes: "KZN WC GP"\n• All content is moderated for safety\n\n🌐 Web: moments.unamifoundation.org/moments\n📧 Support: info@unamifoundation.org\n\nYour community sharing platform 🇿🇦`
