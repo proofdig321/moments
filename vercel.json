@@ -9,15 +9,15 @@
   "routes": [
     {
       "src": "/webhook",
-      "dest": "https://bxmdzxejcxbinghtytfw.supabase.co/functions/v1/webhook"
+      "dest": "https://arqeiadudzwbmzdhqkit.supabase.co/functions/v1/webhook"
     },
     {
       "src": "/api/admin/login",
-      "dest": "https://bxmdzxejcxbinghtytfw.supabase.co/functions/v1/admin-api"
+      "dest": "https://arqeiadudzwbmzdhqkit.supabase.co/functions/v1/admin-api"
     },
     {
       "src": "/admin/(.*)",
-      "dest": "https://bxmdzxejcxbinghtytfw.supabase.co/functions/v1/admin-api/$1"
+      "dest": "https://arqeiadudzwbmzdhqkit.supabase.co/functions/v1/admin-api/$1"
     },
     {
       "src": "/moments/(.*)",
