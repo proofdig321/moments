@@ -48,9 +48,3 @@ BEGIN
   DELETE FROM analytics_events WHERE created_at < NOW() - INTERVAL '90 days';
 END;
 $$ LANGUAGE plpgsql;
-
--- Vacuum analyze for performance
-VACUUM ANALYZE moments;
-VACUUM ANALYZE comments;
-VACUUM ANALYZE subscriptions;
-VACUUM ANALYZE broadcasts;
