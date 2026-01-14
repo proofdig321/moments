@@ -1557,15 +1557,94 @@ serve(async (req) => {
       }
     }
 
-    // Default response
-    return new Response(JSON.stringify({ 
-      message: 'Admin API',
-      path: path,
-      method: method,
-      timestamp: new Date().toISOString()
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    // Budget endpoints
+    if (path.includes('/budget/overview') && method === 'GET') {
+      const budgetData = await supabase
+        .from('budget_transactions')
+        .select('amount, created_at')
+        .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
+      
+      const sponsorData = await supabase
+        .from('sponsors')
+        .select('monthly_budget');
+      
+      const messageCount = await supabase
+        .from('moment_intents')
+        .select('id', { count: 'exact' })
+        .eq('status', 'sent')
+        .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
+      
+      const totalBudget = sponsorData.data?.reduce((sum, s) => sum + (s.monthly_budget || 0), 0) || 10000;
+      const totalSpent = budgetData.data?.reduce((sum, t) => sum + t.amount, 0) || 0;
+      const messageCost = 0.12;
+      const messagesSent = messageCount.count || 0;
+      
+      return new Response(JSON.stringify({
+        success: true,
+        data: {
+          total: totalBudget,
+          used: totalSpent,
+          message_cost: messageCost,
+          messages_sent: messagesSent,
+          messages_remaining: Math.floor((totalBudget - totalSpent) / messageCost)
+        },
+        settings: {
+          monthly_budget: totalBudget,
+          warning_threshold: 80,
+          message_cost: messageCost,
+          daily_limit: 500
+        },
+        alerts: totalSpent / totalBudget > 0.8 ? [{
+          level: totalSpent / totalBudget > 0.9 ? 'critical' : 'warning',
+          message: `Budget at ${Math.round((totalSpent / totalBudget) * 100)}% - ${totalSpent / totalBudget > 0.9 ? 'immediate action required' : 'monitor closely'}`
+        }] : []
+      }), { headers: corsHeaders });
+    }
+
+    if (path.includes('/budget/sponsors') && method === 'GET') {
+      const { data: sponsors } = await supabase
+        .from('sponsors')
+        .select(`
+          id, display_name, monthly_budget,
+          budget_transactions(amount)
+        `);
+      
+      const sponsorBudgets = sponsors?.map(sponsor => ({
+        id: sponsor.id,
+        display_name: sponsor.display_name,
+        budget: sponsor.monthly_budget || 1000,
+        spent: sponsor.budget_transactions?.reduce((sum, t) => sum + t.amount, 0) || 0
+      })) || [];
+      
+      return new Response(JSON.stringify({
+        success: true,
+        sponsors: sponsorBudgets
+      }), { headers: corsHeaders });
+    }
+
+    if (path.includes('/budget/transactions') && method === 'GET') {
+      const { data: transactions } = await supabase
+        .from('budget_transactions')
+        .select(`
+          amount, created_at, message_count, status,
+          campaigns(sponsors(display_name))
+        `)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      const formattedTransactions = transactions?.map(tx => ({
+        amount: tx.amount,
+        created_at: tx.created_at,
+        message_count: tx.message_count || 0,
+        status: tx.status || 'completed',
+        sponsor_name: tx.campaigns?.sponsors?.display_name || 'System'
+      })) || [];
+      
+      return new Response(JSON.stringify({
+        success: true,
+        transactions: formattedTransactions
+      }), { headers: corsHeaders });
+    }
 
   } catch (error) {
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
