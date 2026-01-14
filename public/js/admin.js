@@ -1159,22 +1159,38 @@ async function loadSettings() {
         // Update last updated timestamp
         document.getElementById('last-updated').textContent = new Date().toLocaleDateString();
         
-        // Test webhook connectivity
+        // Test system components
         const webhookStatus = document.getElementById('webhook-status');
-        try {
-            const response = await fetch(window.location.origin + '/health');
-            if (response.ok) {
-                webhookStatus.innerHTML = '✓ Connected and verified';
-                webhookStatus.style.background = '#f0fdf4';
-                webhookStatus.style.color = '#16a34a';
-            } else {
-                throw new Error('Health check failed');
-            }
-        } catch (error) {
+        const systemInfo = document.querySelector('.card div[style*="font-size: 0.875rem"]');
+        
+        // Test connections
+        const [healthCheck, dbCheck, n8nCheck] = await Promise.all([
+            fetch(window.location.origin + '/health').catch(() => ({ ok: false })),
+            apiFetch('/analytics').catch(() => ({ ok: false })),
+            fetch('https://n8n.unamifoundation.org/webhook/health').catch(() => ({ ok: false }))
+        ]);
+        
+        // Update webhook status
+        if (healthCheck.ok) {
+            webhookStatus.innerHTML = '✓ Connected and verified';
+            webhookStatus.style.background = '#f0fdf4';
+            webhookStatus.style.color = '#16a34a';
+        } else {
             webhookStatus.innerHTML = '⚠ Connection issues detected';
             webhookStatus.style.background = '#fef3c7';
             webhookStatus.style.color = '#92400e';
         }
+        
+        // Update system info with real status
+        systemInfo.innerHTML = `
+            <strong>Database:</strong> ${dbCheck.ok ? 'Supabase Connected' : 'Connection Error'}<br>
+            <strong>Storage:</strong> Supabase Storage<br>
+            <strong>MCP:</strong> Internal Function<br>
+            <strong>n8n:</strong> ${n8nCheck.ok ? 'Automation Active' : 'Offline'}<br>
+            <strong>Environment:</strong> Production<br>
+            <strong>Version:</strong> 1.0.0<br>
+            <strong>Last Updated:</strong> <span id="last-updated">${new Date().toLocaleDateString()}</span>
+        `;
         
     } catch (error) {
         console.error('Settings load error:', error);
