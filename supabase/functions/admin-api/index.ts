@@ -405,18 +405,40 @@ serve(async (req) => {
       })
     }
 
+    // Unified analytics endpoint (used by PWA)
+    if (path === '/analytics' && method === 'GET') {
+      const { data } = await supabase.from('unified_analytics').select('*').single()
+      return new Response(JSON.stringify({
+        totalMoments: data?.total_moments || 0,
+        activeSubscribers: data?.active_subscribers || 0,
+        totalBroadcasts: data?.total_broadcasts || 0,
+        broadcastsToday: data?.broadcasts_today || 0,
+        deliveryRate: data?.delivery_rate_7d || 0,
+        sponsoredMoments: data?.sponsored_moments || 0,
+        templateAdoption: data?.template_v2_adoption || 0,
+        avgComplianceScore: data?.avg_compliance_score || 0,
+        lastUpdated: data?.last_updated
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     // Analytics endpoints
     if (path.includes('/analytics/dashboard') && method === 'GET') {
-      const [daily, regional, category] = await Promise.all([
+      const [daily, regional, category, templates, adoption] = await Promise.all([
         supabase.from('daily_stats').select('*').order('stat_date', { ascending: false }).limit(30),
         supabase.from('regional_stats').select('*').order('moment_count', { ascending: false }),
-        supabase.from('category_stats').select('*').order('moment_count', { ascending: false })
+        supabase.from('category_stats').select('*').order('moment_count', { ascending: false }),
+        supabase.from('template_analytics').select('*').limit(30),
+        supabase.from('template_adoption').select('*').single()
       ])
       
       return new Response(JSON.stringify({
         daily: daily.data || [],
         regional: regional.data || [],
-        category: category.data || []
+        category: category.data || [],
+        templates: templates.data || [],
+        adoption: adoption.data || { v2_templates: 0, v1_templates: 0, adoption_rate: 0 }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
