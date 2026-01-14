@@ -1116,56 +1116,40 @@
                 <!-- Global Budget Overview -->
                 <div class="card" style="margin-top: 1rem;">
                     <h3>Global Budget Status</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                        <div>
-                            <h4>Monthly Budget: R<span id="global-budget">10000</span></h4>
-                            <div style="width: 100%; height: 20px; background: #e5e7eb; border-radius: 10px; overflow: hidden; margin: 0.5rem 0;">
-                                <div style="height: 100%; background: #16a34a; width: 45%; transition: width 0.3s ease;"></div>
-                            </div>
-                            <p>Used: R<span id="global-used">4500</span> / R<span id="global-total">10000</span></p>
-                        </div>
-                        <div>
-                            <h4>Template Message Costs</h4>
-                            <p>Cost per message: R0.12</p>
-                            <p>Messages sent: 37,500</p>
-                            <p>Remaining: 45,833</p>
-                        </div>
+                    <div id="budget-overview">
+                        <div class="loading">Loading budget data...</div>
                     </div>
                 </div>
 
                 <!-- Budget Settings -->
                 <div class="card" style="margin-top: 1rem;">
                     <h3>Budget Settings</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
-                        <div>
-                            <div class="form-group">
-                                <label>Monthly Budget Limit (R)</label>
-                                <input type="number" id="monthly-budget" value="10000" min="1000" step="100">
-                            </div>
-                            <div class="form-group">
-                                <label>Warning Threshold (%)</label>
-                                <input type="number" id="warning-threshold" value="80" min="50" max="95">
-                            </div>
-                        </div>
-                        <div>
-                            <div class="form-group">
-                                <label>Template Message Cost (R)</label>
-                                <input type="number" id="message-cost" value="0.12" step="0.01" min="0.05" max="0.50">
-                            </div>
-                            <div class="form-group">
-                                <label>Daily Spend Limit (R)</label>
-                                <input type="number" id="daily-limit" value="500" min="50" step="50">
-                            </div>
-                        </div>
+                    <div id="budget-settings-form">
+                        <div class="loading">Loading settings...</div>
                     </div>
-                    <button class="btn" onclick="saveBudgetSettings()">Save Budget Settings</button>
                 </div>
 
-                <!-- Active Alerts -->
+                <!-- Sponsor Budgets -->
+                <div class="card" style="margin-top: 1rem;">
+                    <h3>Sponsor Budget Allocation</h3>
+                    <div id="sponsor-budgets-list">
+                        <div class="loading">Loading sponsor budgets...</div>
+                    </div>
+                </div>
+
+                <!-- Budget Alerts -->
                 <div class="card" style="margin-top: 1rem;">
                     <h3>Budget Alerts</h3>
-                    <div style="background: #fef3c7; color: #92400e; padding: 1rem; border-radius: 0.5rem; border-left: 4px solid #f59e0b;">
-                        <strong>Warning:</strong> Monthly budget at 45% - within normal range
+                    <div id="budget-alerts">
+                        <div class="loading">Loading alerts...</div>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="card" style="margin-top: 1rem;">
+                    <h3>Recent Transactions</h3>
+                    <div id="budget-transactions">
+                        <div class="loading">Loading transactions...</div>
                     </div>
                 </div>
             </div>

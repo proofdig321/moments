@@ -91,6 +91,7 @@ function showSection(sectionId) {
             case 'broadcasts': loadBroadcasts().catch(console.warn); break;
             case 'moderation': loadModeration().catch(console.warn); break;
             case 'settings': loadSettings().catch(console.warn); break;
+            case 'budget-controls': loadBudgetControls().catch(console.warn); break;
             case 'create': loadSponsors().catch(console.warn); break;
         }
     }, 0);
@@ -1193,17 +1194,186 @@ async function loadSettings() {
     }
 }
 
-// Budget settings function
-function saveBudgetSettings() {
-    const settings = {
-        monthly_budget: document.getElementById('monthly-budget')?.value || 10000,
-        warning_threshold: document.getElementById('warning-threshold')?.value || 80,
-        message_cost: document.getElementById('message-cost')?.value || 0.12,
-        daily_limit: document.getElementById('daily-limit')?.value || 500
-    };
-    
-    localStorage.setItem('budget_settings', JSON.stringify(settings));
-    showSuccess('Budget settings saved successfully!');
+// Load budget controls with real-time data
+async function loadBudgetControls() {
+    try {
+        const [budgetResponse, sponsorsResponse, transactionsResponse] = await Promise.all([
+            apiFetch('/budget/overview'),
+            apiFetch('/budget/sponsors'),
+            apiFetch('/budget/transactions?limit=10')
+        ]);
+        
+        const budgetData = await budgetResponse.json();
+        const sponsorsData = await sponsorsResponse.json();
+        const transactionsData = await transactionsResponse.json();
+        
+        // Update budget overview
+        const budgetOverview = document.getElementById('budget-overview');
+        if (budgetOverview && budgetData.success) {
+            const data = budgetData.data;
+            const percentage = (data.used / data.total) * 100;
+            const fillColor = percentage > 90 ? '#dc2626' : percentage > 70 ? '#f59e0b' : '#16a34a';
+            
+            budgetOverview.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div>
+                        <h4>Monthly Budget: R${data.total.toLocaleString()}</h4>
+                        <div style="width: 100%; height: 20px; background: #e5e7eb; border-radius: 10px; overflow: hidden; margin: 0.5rem 0;">
+                            <div style="height: 100%; background: ${fillColor}; width: ${percentage}%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <p>Used: R${data.used.toLocaleString()} / R${data.total.toLocaleString()} (${Math.round(percentage)}%)</p>
+                    </div>
+                    <div>
+                        <h4>Template Message Costs</h4>
+                        <p>Cost per message: R${data.message_cost}</p>
+                        <p>Messages sent: ${data.messages_sent.toLocaleString()}</p>
+                        <p>Remaining: ${data.messages_remaining.toLocaleString()}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Update budget settings form
+        const budgetSettingsForm = document.getElementById('budget-settings-form');
+        if (budgetSettingsForm && budgetData.success) {
+            const settings = budgetData.settings || {};
+            budgetSettingsForm.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <div>
+                        <div class="form-group">
+                            <label>Monthly Budget Limit (R)</label>
+                            <input type="number" id="monthly-budget" value="${settings.monthly_budget || 10000}" min="1000" step="100">
+                        </div>
+                        <div class="form-group">
+                            <label>Warning Threshold (%)</label>
+                            <input type="number" id="warning-threshold" value="${settings.warning_threshold || 80}" min="50" max="95">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group">
+                            <label>Template Message Cost (R)</label>
+                            <input type="number" id="message-cost" value="${settings.message_cost || 0.12}" step="0.01" min="0.05" max="0.50">
+                        </div>
+                        <div class="form-group">
+                            <label>Daily Spend Limit (R)</label>
+                            <input type="number" id="daily-limit" value="${settings.daily_limit || 500}" min="50" step="50">
+                        </div>
+                    </div>
+                </div>
+                <button class="btn" onclick="saveBudgetSettings()">Save Budget Settings</button>
+            `;
+        }
+        
+        // Update sponsor budgets
+        const sponsorBudgetsList = document.getElementById('sponsor-budgets-list');
+        if (sponsorBudgetsList && sponsorsData.success) {
+            const sponsors = sponsorsData.sponsors || [];
+            if (sponsors.length > 0) {
+                const html = sponsors.map(sponsor => {
+                    const percentage = (sponsor.spent / sponsor.budget) * 100;
+                    const fillColor = percentage > 90 ? '#dc2626' : percentage > 70 ? '#f59e0b' : '#16a34a';
+                    
+                    return `
+                        <div style="margin-bottom: 1rem; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                            <h4>${sponsor.display_name}</h4>
+                            <div style="width: 100%; height: 15px; background: #e5e7eb; border-radius: 8px; overflow: hidden; margin: 0.5rem 0;">
+                                <div style="height: 100%; background: ${fillColor}; width: ${Math.min(percentage, 100)}%; transition: width 0.3s ease;"></div>
+                            </div>
+                            <p>R${sponsor.spent.toLocaleString()} / R${sponsor.budget.toLocaleString()} (${Math.round(percentage)}%)</p>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                <input type="number" value="${sponsor.budget}" placeholder="Budget limit" style="flex: 1; padding: 0.25rem;">
+                                <button class="btn btn-sm" onclick="updateSponsorBudget('${sponsor.id}', this.previousElementSibling.value)">Update</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                sponsorBudgetsList.innerHTML = html;
+            } else {
+                sponsorBudgetsList.innerHTML = '<div class="empty-state">No sponsors found</div>';
+            }
+        }
+        
+        // Update budget alerts
+        const budgetAlerts = document.getElementById('budget-alerts');
+        if (budgetAlerts && budgetData.success) {
+            const alerts = budgetData.alerts || [];
+            if (alerts.length > 0) {
+                const html = alerts.map(alert => {
+                    const alertClass = alert.level === 'critical' ? 'error' : alert.level === 'warning' ? 'alert-warning' : 'alert-info';
+                    return `<div class="${alertClass}" style="margin-bottom: 0.5rem;"><strong>${alert.level.toUpperCase()}:</strong> ${alert.message}</div>`;
+                }).join('');
+                budgetAlerts.innerHTML = html;
+            } else {
+                budgetAlerts.innerHTML = '<div style="color: #16a34a; padding: 1rem; background: #f0fdf4; border-radius: 0.5rem;">✓ All budgets within normal limits</div>';
+            }
+        }
+        
+        // Update transactions
+        const budgetTransactions = document.getElementById('budget-transactions');
+        if (budgetTransactions && transactionsData.success) {
+            const transactions = transactionsData.transactions || [];
+            if (transactions.length > 0) {
+                const html = `
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e5e7eb;">
+                                <th style="text-align: left; padding: 0.5rem;">Date</th>
+                                <th style="text-align: left; padding: 0.5rem;">Sponsor</th>
+                                <th style="text-align: left; padding: 0.5rem;">Messages</th>
+                                <th style="text-align: left; padding: 0.5rem;">Cost</th>
+                                <th style="text-align: left; padding: 0.5rem;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${transactions.map(tx => `
+                                <tr style="border-bottom: 1px solid #e5e7eb;">
+                                    <td style="padding: 0.5rem;">${new Date(tx.created_at).toLocaleDateString()}</td>
+                                    <td style="padding: 0.5rem;">${tx.sponsor_name || 'System'}</td>
+                                    <td style="padding: 0.5rem;">${tx.message_count.toLocaleString()}</td>
+                                    <td style="padding: 0.5rem;">R${tx.amount.toFixed(2)}</td>
+                                    <td style="padding: 0.5rem;"><span style="color: ${tx.status === 'completed' ? '#16a34a' : '#f59e0b'};">✓ ${tx.status}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                budgetTransactions.innerHTML = html;
+            } else {
+                budgetTransactions.innerHTML = '<div class="empty-state">No transactions found</div>';
+            }
+        }
+        
+    } catch (error) {
+        console.error('Budget controls load error:', error);
+        
+        // Show error in each section
+        ['budget-overview', 'budget-settings-form', 'sponsor-budgets-list', 'budget-alerts', 'budget-transactions'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.innerHTML = '<div class="error">Failed to load budget data</div>';
+            }
+        });
+    }
+}
+
+// Update sponsor budget
+async function updateSponsorBudget(sponsorId, newBudget) {
+    try {
+        const response = await apiFetch(`/budget/sponsors/${sponsorId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ budget: parseFloat(newBudget) })
+        });
+        
+        if (response.ok) {
+            showSuccess('Sponsor budget updated successfully');
+            loadBudgetControls(); // Reload data
+        } else {
+            showError('Failed to update sponsor budget');
+        }
+    } catch (error) {
+        showError('Failed to update sponsor budget');
+    }
 }
 
 // Save settings function
