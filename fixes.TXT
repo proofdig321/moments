@@ -1,0 +1,203 @@
+latest updates, meta has labelled our templates as marketing , so now we need to switch the strategy..
+
+and the PWA copy should reflect this shift.
+
+Ah — now I fully understand. ✅
+We are not just crediting the Moments App. The partner who owns the campaign must be credited clearly, and the Moments App is only the platform presenting it. Everything else remains locked to WhatsApp-native, PWA-first, Digital Notice Board.
+Here’s the clean, fresh, corrected top-tier playbook prompt:
+
+UNAMI FOUNDATION MOMENTS APP
+WhatsApp Marketing Template Playbook — Partner-Credited, Top-Tier
+1. PRODUCT CONTEXT
+Name: Unami Foundation Moments App
+Domain / Source of Truth:
+
+
+General: https://moments.unamifoundation.org
+
+
+Moment-specific: https://moments.unamifoundation.org/moments
+
+
+Concept:
+
+
+WhatsApp = primary delivery, native interaction
+
+
+PWA = source of truth for full content, verification, context
+
+
+Digital Notice Board = mental model for all users
+
+
+Tone:
+
+
+Calm, informative, community-first
+
+
+Differentiated: organic vs sponsored campaigns
+
+
+Outcome-focused, not hype or salesy
+
+
+
+2. CONTENT TYPES
+TypeSourceToneCTA / AttributionOrganic MomentUser-generatedNeutral, community-firstLink to moment: https://moments.unamifoundation.org/moments/{slug}Sponsored CampaignPartner-created, admin-publishedStructured, confidentLink to moment + Partner attribution + “Presented via Unami Foundation Moments App”
+Example Partner Attribution (exact language):
+
+Presented by [Partner Name] via Unami Foundation Moments App
+
+
+3. COMMANDS (LOCKED)
+Mandatory commands:
+
+
+START / JOIN → Opt-in
+
+
+STOP / UNSUBSCRIBE → Opt-out
+
+
+HELP / INFO → Show guide
+
+
+REGIONS → Select area(s)
+
+
+INTERESTS → Select categories
+
+
+Optional marketing-friendly commands:
+
+
+WHAT → Explain purpose of Digital Notice Board
+
+
+LATEST → Latest amplified moments
+
+
+SUBMIT → Instructions for user-generated moment
+
+
+
+Commands must remain WhatsApp-native and familiar.
+
+
+4. TEMPLATE STRUCTURE
+All messages must follow this hierarchy:
+
+
+Header (optional, short, max 1 emoji)
+
+
+Example: 📌 Digital Notice Board
+
+
+
+
+Title
+
+
+Clear, scannable, notice-board style
+
+
+
+
+Body
+
+
+Contextual, community-first
+
+
+Differentiate: organic = neutral; sponsored = structured, partner credited
+
+
+
+
+CTA (mandatory)
+
+
+Full context and verification:  
+https://moments.unamifoundation.org/moments/{moment-slug-or-id}
+
+
+
+Footer / Attribution
+
+
+
+
+Organic: Unami Foundation Moments App | info@unamifoundation.org
+
+
+Sponsored: Presented by [Partner Name] via Unami Foundation Moments App | info@unamifoundation.org
+
+
+
+5. MARKETING TEMPLATE CONSTRAINTS
+✅ Allowed:
+
+
+Images + text
+
+
+Broadcast to opt-in users
+
+
+Amplification of organic moments
+
+
+Partner attribution clearly shown
+
+
+❌ Forbidden:
+
+
+Misleading urgency or hype
+
+
+Impersonation
+
+
+Hidden automation
+
+
+CMS / backend references
+
+
+
+6. TONE DIFFERENTIATION
+TypeToneExample PhrasingOrganicNeutral, community-first“A new community moment has been shared on the Unami Foundation Moments App”SponsoredStructured, partner credited“This sponsored community notice is presented by [Partner Name] via the Unami Foundation Moments App”
+
+7. MASTER AI PROMPT (FINAL)
+Use this exact prompt to generate WhatsApp marketing templates:
+You are generating WhatsApp marketing templates for the Unami Foundation Moments App.
+
+Context:
+- WhatsApp is the primary delivery layer.
+- PWA is the source of truth:
+    - General: https://moments.unamifoundation.org
+    - Moment-specific: https://moments.unamifoundation.org/moments
+- Users are WhatsApp-native.
+- Organic moments: user-generated, neutral, community-first.
+- Sponsored moments: admin-published campaigns owned by partners, must credit partner clearly.
+- Sponsored attribution format: "Presented by [Partner Name] via Unami Foundation Moments App".
+
+Constraints:
+- Only approved commands: START / JOIN, STOP / UNSUBSCRIBE, HELP / INFO, REGIONS, INTERESTS.
+- CTA must link to the actual moment on the PWA.
+- Tone must be calm, informative, community-first.
+- Do not include CMS, moderation, or backend references.
+- Include support email: info@unamifoundation.org
+- Return only the WhatsApp message body.
+
+Template structure:
+Header → Title → Body → CTA → Footer / Attribution
+Distinguish clearly between organic moments and sponsored campaigns.
+Include full context and PWA links for verification.
+
+
+This version now fully incorporates partners in sponsored campaigns, keeps all commands intact, maintains PWA-first links, and locks tone and marketing compliance.
