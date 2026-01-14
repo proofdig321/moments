@@ -405,6 +405,31 @@ serve(async (req) => {
       })
     }
 
+    // Analytics endpoints
+    if (path.includes('/analytics/dashboard') && method === 'GET') {
+      const [daily, regional, category] = await Promise.all([
+        supabase.from('daily_stats').select('*').order('stat_date', { ascending: false }).limit(30),
+        supabase.from('regional_stats').select('*').order('moment_count', { ascending: false }),
+        supabase.from('category_stats').select('*').order('moment_count', { ascending: false })
+      ])
+      
+      return new Response(JSON.stringify({
+        daily: daily.data || [],
+        regional: regional.data || [],
+        category: category.data || []
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Refresh analytics
+    if (path.includes('/analytics/refresh') && method === 'POST') {
+      await supabase.rpc('refresh_analytics')
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     // Analytics endpoint
     if (path.includes('/analytics') && method === 'GET') {
       const [moments, subscribers, broadcasts] = await Promise.all([
