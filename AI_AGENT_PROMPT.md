@@ -29,11 +29,13 @@ You are a senior software engineer working on the **Unami Foundation Moments App
 
 ### Database Schemas (Supabase SQL Editor)
 1. `supabase/CLEAN_SCHEMA.sql` - Core tables (moments, sponsors, subscriptions, broadcasts, comments)
-2. `supabase/production_hardening.sql` - Rate limits, audit logs, feature flags, error tracking
-3. `supabase/advanced_features.sql` - Comment threads, user profiles, notifications, analytics events
-4. `supabase/whatsapp_comments.sql` - WhatsApp reply-to-comment mapping, auto-approval trigger
-5. `supabase/analytics_dashboard.sql` - Daily/regional/category stats, refresh function
-6. `supabase/system_optimization.sql` - Performance indexes, materialized views, cleanup function
+2. `supabase/mcp_advisory_function.sql` - MCP content moderation RPC function
+3. `supabase/comments_table.sql` - Comments system with moderation workflow
+4. `supabase/production_hardening.sql` - Rate limits, audit logs, feature flags, error tracking
+5. `supabase/advanced_features.sql` - Comment threads, user profiles, notifications, analytics events
+6. `supabase/whatsapp_comments.sql` - WhatsApp reply-to-comment mapping, auto-approval trigger
+7. `supabase/analytics_dashboard.sql` - Daily/regional/category stats, refresh function
+8. `supabase/system_optimization.sql` - Performance indexes, materialized views, cleanup function
 
 ### Edge Functions (Deno/TypeScript)
 - `supabase/functions/webhook/index.ts` - WhatsApp webhook handler, command processing, MCP integration
@@ -134,11 +136,13 @@ supabase functions deploy system-cleanup
 ### Database Migrations
 Run in Supabase SQL Editor (order matters):
 1. CLEAN_SCHEMA.sql
-2. production_hardening.sql
-3. advanced_features.sql
-4. whatsapp_comments.sql
-5. analytics_dashboard.sql
-6. system_optimization.sql
+2. mcp_advisory_function.sql
+3. comments_table.sql
+4. production_hardening.sql
+5. advanced_features.sql
+6. whatsapp_comments.sql
+7. analytics_dashboard.sql
+8. system_optimization.sql
 
 ### GitHub Actions (Auto-Deploy)
 - `analytics-refresh.yml` - Hourly (cron: '0 * * * *')

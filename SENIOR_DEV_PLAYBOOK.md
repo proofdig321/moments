@@ -30,7 +30,7 @@ WhatsApp Business API (+27 65 829 5041)
     ↓
 Supabase Edge Functions (webhook, admin-api, broadcast-webhook)
     ↓
-Supabase PostgreSQL (CLEAN_SCHEMA.sql + 8 enhancement schemas)
+Supabase PostgreSQL (CLEAN_SCHEMA.sql + 7 enhancement schemas)
     ↓
 n8n Workflows (intent-executor, soft-moderation, campaign)
     ↓
@@ -214,11 +214,13 @@ SUPABASE_SERVICE_KEY
 6. **whatsapp_comments** - WhatsApp reply mapping
 
 ### Enhancement Schemas (Deployed)
-1. `production_hardening.sql` - Rate limits, audit logs, feature flags
-2. `advanced_features.sql` - Comment threads, user profiles, notifications
-3. `whatsapp_comments.sql` - Reply-to-comment system
-4. `analytics_dashboard.sql` - Real-time metrics
-5. `system_optimization.sql` - Performance indexes, cleanup functions
+1. `mcp_advisory_function.sql` - MCP content moderation RPC function
+2. `comments_table.sql` - Comments system with moderation
+3. `production_hardening.sql` - Rate limits, audit logs, feature flags, error tracking
+4. `advanced_features.sql` - Comment threads, user profiles, notifications, analytics events
+5. `whatsapp_comments.sql` - Reply-to-comment system, auto-approval trigger
+6. `analytics_dashboard.sql` - Daily/regional/category stats, refresh function
+7. `system_optimization.sql` - Performance indexes, materialized views, cleanup function
 
 ### Key Functions
 - `mcp_advisory()` - Content moderation (0.0-1.0 confidence)
@@ -301,11 +303,13 @@ supabase functions deploy system-cleanup
 ```bash
 # Run in Supabase SQL Editor (order matters):
 1. CLEAN_SCHEMA.sql
-2. production_hardening.sql
-3. advanced_features.sql
-4. whatsapp_comments.sql
-5. analytics_dashboard.sql
-6. system_optimization.sql
+2. mcp_advisory_function.sql
+3. comments_table.sql
+4. production_hardening.sql
+5. advanced_features.sql
+6. whatsapp_comments.sql
+7. analytics_dashboard.sql
+8. system_optimization.sql
 ```
 
 ### GitHub Actions (Auto-Deploy)
