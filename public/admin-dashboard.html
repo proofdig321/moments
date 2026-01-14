@@ -329,6 +329,10 @@
                         <span class="icon icon-broadcasts"></span>
                         <span>Broadcasts</span>
                     </button>
+                    <button class="admin-nav-item" data-section="compliance">
+                        <span class="icon icon-compliance"></span>
+                        <span>Compliance</span>
+                    </button>
                     <button class="admin-nav-item" data-section="settings">
                         <span class="icon icon-settings"></span>
                         <span>Settings</span>
@@ -810,6 +814,34 @@
                 <h2>Broadcast History</h2>
                 <div id="broadcasts-list">
                     <div class="loading">Loading broadcasts...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compliance Section -->
+        <div id="compliance" class="section">
+            <div class="card">
+                <h2>📊 Marketing Template Compliance</h2>
+                <div class="analytics-grid" style="margin-bottom: 1.5rem;">
+                    <div class="stat-card">
+                        <div class="stat-number" id="compliance-total">0</div>
+                        <div class="stat-label">Total Audits</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="compliance-avg">0</div>
+                        <div class="stat-label">Avg Score</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="compliance-perfect">0</div>
+                        <div class="stat-label">Perfect (100)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="compliance-issues">0</div>
+                        <div class="stat-label">Issues (&lt;90)</div>
+                    </div>
+                </div>
+                <div id="compliance-list">
+                    <div class="loading">Loading compliance data...</div>
                 </div>
             </div>
         </div>
@@ -1576,6 +1608,7 @@
     <script src="/js/admin-users.js"></script>
     <script src="/js/analytics.js"></script>
     <script src="/js/compliance.js"></script>
+    <script src="/js/compliance-dashboard.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
         // Dashboard analytics with charts
