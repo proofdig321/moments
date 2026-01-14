@@ -1,0 +1,15 @@
+name: Analytics Refresh
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Every hour
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh Analytics
+        run: |
+          curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/analytics-refresh" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}"
