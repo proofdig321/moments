@@ -1044,7 +1044,7 @@ serve(async (req) => {
     }
 
     // Get campaigns
-    if (path.includes('/campaigns') && method === 'GET') {
+    if (path.includes('/campaigns') && method === 'GET' && !path.match(/\/campaigns\/[a-f0-9-]{36}/)) {
       const { data: campaigns } = await supabase
         .from('campaigns')
         .select('*')
@@ -1052,6 +1052,69 @@ serve(async (req) => {
         .limit(50)
 
       return new Response(JSON.stringify({ campaigns: campaigns || [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Get single campaign
+    if (path.match(/\/campaigns\/[a-f0-9-]{36}$/) && method === 'GET') {
+      const campaignId = path.split('/campaigns/')[1]
+      const { data: campaign, error } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('id', campaignId)
+        .single()
+
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      return new Response(JSON.stringify({ campaign }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Update campaign
+    if (path.match(/\/campaigns\/[a-f0-9-]{36}$/) && method === 'PUT' && body) {
+      const campaignId = path.split('/campaigns/')[1]
+      const { data, error } = await supabase
+        .from('campaigns')
+        .update(body)
+        .eq('id', campaignId)
+        .select()
+        .single()
+
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      return new Response(JSON.stringify({ campaign: data }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Delete campaign
+    if (path.match(/\/campaigns\/[a-f0-9-]{36}$/) && method === 'DELETE') {
+      const campaignId = path.split('/campaigns/')[1]
+      const { error } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('id', campaignId)
+
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
