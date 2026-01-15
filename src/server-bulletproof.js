@@ -547,8 +547,6 @@ South Africans share local opportunities and events here.
 async function sendMessage(phoneNumber, message) {
   try {
     console.log(`Attempting to send message to ${phoneNumber}:`, message);
-    console.log('WHATSAPP_PHONE_ID:', process.env.WHATSAPP_PHONE_ID);
-    console.log('WHATSAPP_TOKEN exists:', !!process.env.WHATSAPP_TOKEN);
     
     const response = await fetch(
       `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_ID}/messages`,
@@ -567,16 +565,17 @@ async function sendMessage(phoneNumber, message) {
       }
     );
     
-    const responseText = await response.text();
-    console.log('WhatsApp API response:', response.status, responseText);
-    
     if (response.ok) {
       console.log(`✅ Message sent to ${phoneNumber}`);
+      return true;
     } else {
+      const responseText = await response.text();
       console.error('❌ Send message error:', responseText);
+      return false;
     }
   } catch (error) {
     console.error('❌ Send message error:', error.message);
+    return false;
   }
 }
 
@@ -1296,26 +1295,41 @@ app.post('/admin/campaigns/:id/activate', authenticateAdmin, async (req, res) =>
       })
       .eq('id', broadcast.id);
     
-    // Trigger batch processors
+    // Process batches directly on server
+    let totalSuccess = 0;
+    let totalFailure = 0;
+    
     for (const batchRecord of batchRecords) {
-      try {
-        await fetch(`${process.env.SUPABASE_URL}/functions/v1/broadcast-batch-processor`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            batch_id: batchRecord.id,
-            message: broadcastMessage
-          })
-        });
-      } catch (error) {
-        console.error(`Failed to trigger batch ${batchRecord.batch_number}:`, error.message);
+      let batchSuccess = 0;
+      let batchFailure = 0;
+      
+      await supabase.from('broadcast_batches').update({ status: 'processing' }).eq('id', batchRecord.id);
+      
+      for (const recipient of batchRecord.recipients) {
+        let phone = recipient.replace(/\D/g, '');
+        if (!phone.startsWith('27')) phone = phone.startsWith('0') ? '27' + phone.substring(1) : '27' + phone;
+        
+        const success = await sendMessage(phone, broadcastMessage);
+        success ? batchSuccess++ : batchFailure++;
+        
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
+      
+      await supabase.from('broadcast_batches').update({
+        status: 'completed',
+        success_count: batchSuccess,
+        failure_count: batchFailure
+      }).eq('id', batchRecord.id);
+      
+      totalSuccess += batchSuccess;
+      totalFailure += batchFailure;
     }
     
-    console.log(`✅ Campaign broadcast triggered: ${batchRecords.length} batches`);
+    await supabase.from('broadcasts').update({
+      status: 'completed',
+      success_count: totalSuccess,
+      failure_count: totalFailure
+    }).eq('id', broadcast.id);
     
     res.json({ 
       success: true, 
@@ -1561,26 +1575,41 @@ app.post('/admin/moments/:id/broadcast', authenticateAdmin, async (req, res) => 
       })
       .eq('id', broadcast.id);
     
-    // Trigger batch processors
+    // Process batches directly on server
+    let totalSuccess = 0;
+    let totalFailure = 0;
+    
     for (const batchRecord of batchRecords) {
-      try {
-        await fetch(`${process.env.SUPABASE_URL}/functions/v1/broadcast-batch-processor`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            batch_id: batchRecord.id,
-            message: broadcastMessage
-          })
-        });
-      } catch (error) {
-        console.error(`Failed to trigger batch ${batchRecord.batch_number}:`, error.message);
+      let batchSuccess = 0;
+      let batchFailure = 0;
+      
+      await supabase.from('broadcast_batches').update({ status: 'processing' }).eq('id', batchRecord.id);
+      
+      for (const recipient of batchRecord.recipients) {
+        let phone = recipient.replace(/\D/g, '');
+        if (!phone.startsWith('27')) phone = phone.startsWith('0') ? '27' + phone.substring(1) : '27' + phone;
+        
+        const success = await sendMessage(phone, broadcastMessage);
+        success ? batchSuccess++ : batchFailure++;
+        
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
+      
+      await supabase.from('broadcast_batches').update({
+        status: 'completed',
+        success_count: batchSuccess,
+        failure_count: batchFailure
+      }).eq('id', batchRecord.id);
+      
+      totalSuccess += batchSuccess;
+      totalFailure += batchFailure;
     }
     
-    console.log(`✅ Triggered ${batchRecords.length} batch processors`);
+    await supabase.from('broadcasts').update({
+      status: 'completed',
+      success_count: totalSuccess,
+      failure_count: totalFailure
+    }).eq('id', broadcast.id);
     
     res.json({ 
       success: true, 
