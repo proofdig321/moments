@@ -1670,16 +1670,16 @@ serve(async (req) => {
         .from('campaigns')
         .update({ status: 'published' })
         .eq('id', campaignId)
-        .update({ status: 'published' })
-        .eq('id', campaignId)
 
       // Format broadcast message
       const sponsorText = campaign.sponsor_id ? '\\n\\nSponsored Content' : ''
       const broadcastMessage = `📢 Unami Foundation Campaign — ${moment.region}\\n\\n${moment.title}\\n\\n${moment.content}${sponsorText}\\n\\n🌐 More: moments.unamifoundation.org/moments`
 
+      console.log('📤 Triggering WhatsApp broadcast to', recipientCount, 'subscribers')
+
       // Trigger WhatsApp broadcast
       try {
-        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`, {
+        const webhookResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
@@ -1692,8 +1692,15 @@ serve(async (req) => {
             moment_id: moment.id
           })
         })
+        
+        if (webhookResponse.ok) {
+          console.log('✅ WhatsApp broadcast triggered successfully')
+        } else {
+          const errorText = await webhookResponse.text()
+          console.error('❌ WhatsApp broadcast failed:', webhookResponse.status, errorText)
+        }
       } catch (webhookError) {
-        console.error('Campaign broadcast webhook error:', webhookError)
+        console.error('❌ Campaign broadcast webhook error:', webhookError)
       }
 
       return new Response(JSON.stringify({
