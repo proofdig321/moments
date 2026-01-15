@@ -4,7 +4,7 @@ let complianceCategories = [];
 // Load compliance categories on page load
 async function loadComplianceCategories() {
     try {
-        const response = await fetch('/supabase/functions/v1/admin-api/compliance/categories', {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-api/compliance/categories`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`,
                 'Content-Type': 'application/json'

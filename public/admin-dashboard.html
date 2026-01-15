@@ -1476,7 +1476,7 @@
                 
                 // Fetch user role from server
                 try {
-                    const roleResponse = await fetch('/admin/user-role', {
+                    const roleResponse = await fetch(`${SUPABASE_URL}/functions/v1/admin-api/user-role`, {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }
@@ -1562,7 +1562,7 @@
         });
     </script>
     <script src="/js/chart.min.js"></script>
-    <script src="/js/admin.js?v=1.0.9"></script>
+    <script src="/js/admin.js?v=1.0.8"></script>
     <script src="/js/analytics.js"></script>
     <script src="/js/compliance.js"></script>
 </body>

@@ -911,14 +911,15 @@ serve(async (req) => {
     }
 
     // Enhanced sponsors with branding
-    if (path.includes('/sponsors') && method === 'GET' && !path.match(/\/sponsors\/[^\/]+/)) {
+    if (path.includes('/sponsors') && method === 'GET') {
       const { data: sponsors } = await supabase
         .from('sponsors')
         .select(`
           *,
           sponsor_assets(*)
         `)
-        .order('created_at', { ascending: false })
+        .eq('active', true)
+        .order('tier DESC, name')
 
       return new Response(JSON.stringify({ sponsors: sponsors || [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -1043,7 +1044,7 @@ serve(async (req) => {
     }
 
     // Get campaigns
-    if (path.includes('/campaigns') && method === 'GET' && !path.match(/\/campaigns\/[^\/]+/)) {
+    if (path.includes('/campaigns') && method === 'GET') {
       const { data: campaigns } = await supabase
         .from('campaigns')
         .select('*')
@@ -1051,62 +1052,6 @@ serve(async (req) => {
         .limit(50)
 
       return new Response(JSON.stringify({ campaigns: campaigns || [] }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    // Get single campaign
-    if (path.match(/\/campaigns\/[^\/]+$/) && method === 'GET') {
-      const campaignId = path.split('/campaigns/')[1]
-      const { data: campaign } = await supabase
-        .from('campaigns')
-        .select('*')
-        .eq('id', campaignId)
-        .single()
-
-      return new Response(JSON.stringify({ campaign: campaign || null }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    // Update campaign
-    if (path.match(/\/campaigns\/[^\/]+$/) && method === 'PUT' && body) {
-      const campaignId = path.split('/campaigns/')[1]
-      const { data, error } = await supabase
-        .from('campaigns')
-        .update(body)
-        .eq('id', campaignId)
-        .select()
-        .single()
-
-      if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-
-      return new Response(JSON.stringify({ campaign: data }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    // Delete campaign
-    if (path.match(/\/campaigns\/[^\/]+$/) && method === 'DELETE') {
-      const campaignId = path.split('/campaigns/')[1]
-      const { error } = await supabase
-        .from('campaigns')
-        .delete()
-        .eq('id', campaignId)
-
-      if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-
-      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
