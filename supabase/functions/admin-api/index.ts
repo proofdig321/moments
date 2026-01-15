@@ -700,19 +700,41 @@ serve(async (req) => {
             // Trigger broadcast webhook
             const broadcastMsg = `📢 Unami Foundation Moments — ${moment.region}\\n\\n${moment.title}\\n\\n${moment.content}\\n\\n🌐 More: moments.unamifoundation.org/moments`
 
-            await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                broadcast_id: broadcast.id,
-                message: broadcastMsg,
-                recipients: subscribers.map(s => s.phone_number),
-                moment_id: moment.id
-              })
+            const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`
+            const webhookPayload = JSON.stringify({
+              broadcast_id: broadcast.id,
+              message: broadcastMsg,
+              recipients: subscribers.map(s => s.phone_number),
+              moment_id: moment.id
             })
+
+            console.log(`📡 Auto-broadcast webhook: POST ${webhookUrl}`)
+            console.log(`Status: Sending to ${subscribers.length} subscribers`)
+
+            try {
+              const webhookResponse = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+                  'Content-Type': 'application/json'
+                },
+                body: webhookPayload,
+                signal: AbortSignal.timeout(10000)
+              })
+
+              const responseText = await webhookResponse.text()
+              console.log(`📨 Auto-broadcast response: ${webhookResponse.status} - ${responseText.substring(0, 300)}`)
+
+              if (!webhookResponse.ok) {
+                console.error(`❌ Auto-broadcast webhook failed: ${webhookResponse.status}\nURL: ${webhookUrl}\nResponse: ${responseText}`)
+                await logError(supabase, 'auto_broadcast_webhook_failed', `HTTP ${webhookResponse.status}: ${responseText}`, { broadcast_id: broadcast.id, moment_id: moment.id, webhook_url: webhookUrl }, 'high')
+              } else {
+                console.log('✅ Auto-broadcast webhook succeeded')
+              }
+            } catch (webhookError) {
+              console.error(`❌ Auto-broadcast webhook error: ${webhookError.message} (${webhookError.name})`)
+              await logError(supabase, 'auto_broadcast_webhook_error', webhookError.message, { broadcast_id: broadcast.id, moment_id: moment.id, webhook_url: webhookUrl }, 'high')
+            }
           }
         } catch (broadcastError) {
           console.error('Auto-broadcast failed:', broadcastError)
@@ -808,26 +830,39 @@ serve(async (req) => {
       const broadcastMessage = `📢 Unami Foundation Moments — ${moment.region}\\n\\n${moment.title}\\n\\n${moment.content}\\n\\n🌐 More: moments.unamifoundation.org/moments`
 
       // Trigger broadcast webhook
+      const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`
+      const webhookPayload = JSON.stringify({
+        broadcast_id: broadcast.id,
+        message: broadcastMessage,
+        recipients: subscribers.map(s => s.phone_number),
+        moment_id: momentId
+      })
+
+      console.log(`📡 Moment broadcast webhook: POST ${webhookUrl}`)
+      console.log(`Status: Creating broadcast for ${recipients.length} subscribers`)
       try {
-        const webhookResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`, {
+        const webhookResponse = await fetch(webhookUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            broadcast_id: broadcast.id,
-            message: broadcastMessage,
-            recipients: subscribers.map(s => s.phone_number),
-            moment_id: momentId
-          })
+          body: webhookPayload,
+          signal: AbortSignal.timeout(10000)
         })
 
+        const responseText = await webhookResponse.text()
+        console.log(`📨 Webhook response: ${webhookResponse.status} - ${responseText.substring(0, 300)}`)
+
         if (!webhookResponse.ok) {
-          console.error('Broadcast webhook failed:', await webhookResponse.text())
+          console.error(`❌ Broadcast webhook failed: ${webhookResponse.status}\nURL: ${webhookUrl}\nResponse: ${responseText}`)
+          await logError(supabase, 'moment_broadcast_webhook_failed', `HTTP ${webhookResponse.status}: ${responseText}`, { broadcast_id: broadcast.id, moment_id: momentId, webhook_url: webhookUrl }, 'high')
+        } else {
+          console.log('✅ Broadcast webhook succeeded')
         }
       } catch (webhookError) {
-        console.error('Webhook trigger error:', webhookError)
+        console.error(`❌ Broadcast webhook error: ${webhookError.message} (${webhookError.name})`)
+        await logError(supabase, 'moment_broadcast_webhook_error', webhookError.message, { broadcast_id: broadcast.id, moment_id: momentId, webhook_url: webhookUrl, error_name: webhookError.name }, 'high')
       }
 
       return new Response(JSON.stringify({
@@ -1080,29 +1115,29 @@ serve(async (req) => {
     // Update campaign
     if (path.match(/\/campaigns\/[a-f0-9-]{36}$/) && method === 'PUT' && body) {
       const campaignId = path.split('/campaigns/')[1]
-      
+
       // Clean and validate data
       const updateData: any = {}
-      
+
       if (body.title) updateData.title = body.title
       if (body.content) updateData.content = body.content
       if (body.category) updateData.category = body.category
-      
+
       // Handle sponsor_id - convert empty string to null
       if (body.sponsor_id !== undefined) {
         updateData.sponsor_id = body.sponsor_id === '' ? null : body.sponsor_id
       }
-      
+
       // Handle budget - convert string to number
       if (body.budget !== undefined) {
         updateData.budget = typeof body.budget === 'string' ? parseFloat(body.budget) : body.budget
       }
-      
+
       // Handle arrays
       if (body.target_regions) updateData.target_regions = body.target_regions
       if (body.target_categories) updateData.target_categories = body.target_categories
       if (body.media_urls) updateData.media_urls = body.media_urls
-      
+
       // Handle scheduled_at - add seconds if missing, convert empty to null
       if (body.scheduled_at !== undefined) {
         if (body.scheduled_at === '' || body.scheduled_at === null) {
@@ -1113,11 +1148,11 @@ serve(async (req) => {
           updateData.scheduled_at = dt
         }
       }
-      
+
       if (body.status) updateData.status = body.status
-      
+
       console.log('📝 Updating campaign:', campaignId, updateData)
-      
+
       const { data, error } = await supabase
         .from('campaigns')
         .update(updateData)
@@ -1605,13 +1640,13 @@ serve(async (req) => {
       // Convert campaign to moment for broadcasting
       // Use campaign category directly (no mapping needed with expanded categories)
       const campaignCategory = Array.isArray(campaign.target_categories) ? campaign.target_categories[0] : 'General'
-      
+
       // Ensure content meets minimum length (10 chars)
       let momentContent = campaign.content
       if (momentContent.length < 10) {
         momentContent = momentContent + ' - ' + campaign.title
       }
-      
+
       const momentData = {
         title: campaign.title,
         content: momentContent,
@@ -1678,29 +1713,39 @@ serve(async (req) => {
       console.log('📤 Triggering WhatsApp broadcast to', recipientCount, 'subscribers')
 
       // Trigger WhatsApp broadcast
+      const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`
+      const webhookPayload = JSON.stringify({
+        broadcast_id: broadcast.id,
+        message: broadcastMessage,
+        recipients: subscribers.map(s => s.phone_number),
+        moment_id: moment.id
+      })
+
+      console.log(`📡 Campaign broadcast webhook: POST ${webhookUrl}`)
+      console.log(`Status: Broadcasting to ${recipients.length} subscribers`)
       try {
-        const webhookResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`, {
+        const webhookResponse = await fetch(webhookUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            broadcast_id: broadcast.id,
-            message: broadcastMessage,
-            recipients: subscribers.map(s => s.phone_number),
-            moment_id: moment.id
-          })
+          body: webhookPayload,
+          signal: AbortSignal.timeout(10000)
         })
-        
+
+        const responseText = await webhookResponse.text()
+        console.log(`📨 Campaign response: ${webhookResponse.status} - ${responseText.substring(0, 300)}`)
+
         if (webhookResponse.ok) {
-          console.log('✅ WhatsApp broadcast triggered successfully')
+          console.log('✅ Campaign WhatsApp broadcast triggered successfully')
         } else {
-          const errorText = await webhookResponse.text()
-          console.error('❌ WhatsApp broadcast failed:', webhookResponse.status, errorText)
+          console.error(`❌ Campaign WhatsApp broadcast failed: ${webhookResponse.status}\nResponse: ${responseText}`)
+          await logError(supabase, 'campaign_broadcast_webhook_failed', `HTTP ${webhookResponse.status}: ${responseText}`, { broadcast_id: broadcast.id, campaign_id: campaignId, webhook_url: webhookUrl }, 'high')
         }
       } catch (webhookError) {
-        console.error('❌ Campaign broadcast webhook error:', webhookError)
+        console.error(`❌ Campaign broadcast webhook error: ${webhookError.message} (${webhookError.name})`)
+        await logError(supabase, 'campaign_broadcast_webhook_error', webhookError.message, { broadcast_id: broadcast.id, campaign_id: campaignId, webhook_url: webhookUrl }, 'high')
       }
 
       return new Response(JSON.stringify({
