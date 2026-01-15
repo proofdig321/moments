@@ -911,15 +911,14 @@ serve(async (req) => {
     }
 
     // Enhanced sponsors with branding
-    if (path.includes('/sponsors') && method === 'GET') {
+    if (path.includes('/sponsors') && method === 'GET' && !path.match(/\/sponsors\/[^\/]+/)) {
       const { data: sponsors } = await supabase
         .from('sponsors')
         .select(`
           *,
           sponsor_assets(*)
         `)
-        .eq('active', true)
-        .order('tier DESC, name')
+        .order('created_at', { ascending: false })
 
       return new Response(JSON.stringify({ sponsors: sponsors || [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
