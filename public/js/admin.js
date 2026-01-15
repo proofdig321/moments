@@ -2164,7 +2164,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setButtonLoading(submitBtn, false);
             }
         });
-    }
+    });
 
     const campaignForm = document.getElementById('campaign-form-modal');
     const campaignFormInline = document.getElementById('campaign-form-inline');
@@ -2257,7 +2257,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setButtonLoading(submitBtn, false);
             }
         });
-    }
+    });
 
     const adminUserForm = document.getElementById('admin-user-form');
     if (adminUserForm) {
