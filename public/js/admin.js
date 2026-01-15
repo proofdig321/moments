@@ -1209,7 +1209,13 @@ async function loadBudgetControls() {
         const cacheBust = `?_=${Date.now()}`;
         const settingsResponse = await apiFetch(`/budget/settings${cacheBust}`);
         const settingsData = await settingsResponse.json();
-        const settings = settingsData.settings || {};
+        
+        // Convert array to object keyed by setting_key
+        const settingsArray = settingsData.settings || [];
+        const settings = {};
+        settingsArray.forEach(s => {
+            settings[s.setting_key] = s.setting_value;
+        });
         console.log('Settings loaded:', settings);
         
         const [budgetResponse, sponsorsResponse, transactionsResponse] = await Promise.all([
