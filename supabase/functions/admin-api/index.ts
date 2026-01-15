@@ -1603,11 +1603,14 @@ serve(async (req) => {
       }
 
       // Convert campaign to moment for broadcasting
+      // Use campaign category directly (no mapping needed with expanded categories)
+      const campaignCategory = Array.isArray(campaign.target_categories) ? campaign.target_categories[0] : 'General'
+      
       const momentData = {
         title: campaign.title,
         content: campaign.content,
         region: Array.isArray(campaign.target_regions) ? campaign.target_regions[0] : 'National',
-        category: Array.isArray(campaign.target_categories) ? campaign.target_categories[0] : 'General',
+        category: campaignCategory,
         sponsor_id: campaign.sponsor_id || null,
         is_sponsored: !!campaign.sponsor_id,
         content_source: 'campaign',
