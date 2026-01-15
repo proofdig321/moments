@@ -546,9 +546,7 @@ South Africans share local opportunities and events here.
 
 async function sendMessage(phoneNumber, message) {
   try {
-    console.log(`Attempting to send message to ${phoneNumber}:`, message);
-    console.log('WHATSAPP_PHONE_ID:', process.env.WHATSAPP_PHONE_ID);
-    console.log('WHATSAPP_TOKEN exists:', !!process.env.WHATSAPP_TOKEN);
+    console.log(`Attempting to send message to ${phoneNumber}`);
     
     const response = await fetch(
       `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_ID}/messages`,
@@ -567,16 +565,17 @@ async function sendMessage(phoneNumber, message) {
       }
     );
     
-    const responseText = await response.text();
-    console.log('WhatsApp API response:', response.status, responseText);
-    
     if (response.ok) {
       console.log(`✅ Message sent to ${phoneNumber}`);
+      return true;
     } else {
-      console.error('❌ Send message error:', responseText);
+      const responseText = await response.text();
+      console.error(`❌ Send failed to ${phoneNumber}:`, responseText);
+      return false;
     }
   } catch (error) {
-    console.error('❌ Send message error:', error.message);
+    console.error(`❌ Send error to ${phoneNumber}:`, error.message);
+    return false;
   }
 }
 
@@ -1420,63 +1419,52 @@ app.post('/admin/moments/:id/broadcast', authenticateAdmin, async (req, res) => 
     
     const broadcastMessage = `📢 Unami Foundation Moments — ${moment.region}\n\n${moment.title}\n\n${moment.content}${sponsorText}\n\n🌐 More: moments.unamifoundation.org`;
     
-    // Trigger actual WhatsApp broadcast via Supabase Edge Function
-    try {
-      const webhookResponse = await fetch(`${process.env.SUPABASE_URL}/functions/v1/broadcast-webhook`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          broadcast_id: broadcast.id,
-          message: broadcastMessage,
-          recipients: subscribers.map(s => s.phone_number),
-          moment_id: id
-        })
-      });
+    // Direct WhatsApp broadcast implementation
+    let successCount = 0;
+    let failureCount = 0;
+    
+    console.log(`📡 Broadcasting to ${recipientCount} subscribers`);
+    
+    // Update broadcast status to processing
+    await supabase
+      .from('broadcasts')
+      .update({ status: 'processing' })
+      .eq('id', broadcast.id);
+    
+    // Send messages directly with rate limiting
+    for (let i = 0; i < subscribers.length; i++) {
+      const phoneNumber = subscribers[i].phone_number;
       
-      if (webhookResponse.ok) {
-        console.log('WhatsApp broadcast triggered successfully');
-        
-        // Update broadcast status to processing
-        await supabase
-          .from('broadcasts')
-          .update({ status: 'processing' })
-          .eq('id', broadcast.id);
-          
-      } else {
-        console.error('WhatsApp broadcast trigger failed:', await webhookResponse.text());
-        
-        // Fallback: simulate successful broadcast for now
-        setTimeout(async () => {
-          await supabase
-            .from('broadcasts')
-            .update({
-              status: 'completed',
-              success_count: Math.floor(recipientCount * 0.95),
-              failure_count: Math.ceil(recipientCount * 0.05),
-              broadcast_completed_at: new Date().toISOString()
-            })
-            .eq('id', broadcast.id);
-        }, 3000);
+      try {
+        const success = await sendMessage(phoneNumber, broadcastMessage);
+        if (success) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+      } catch (error) {
+        console.error(`Failed to send to ${phoneNumber}:`, error.message);
+        failureCount++;
       }
-    } catch (webhookError) {
-      console.error('Webhook trigger error:', webhookError);
       
-      // Fallback: simulate successful broadcast
-      setTimeout(async () => {
-        await supabase
-          .from('broadcasts')
-          .update({
-            status: 'completed',
-            success_count: Math.floor(recipientCount * 0.95),
-            failure_count: Math.ceil(recipientCount * 0.05),
-            broadcast_completed_at: new Date().toISOString()
-          })
-          .eq('id', broadcast.id);
-      }, 3000);
+      // Rate limiting: 200ms between messages (5 msg/sec)
+      if (i < subscribers.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
     }
+    
+    // Update final broadcast results
+    await supabase
+      .from('broadcasts')
+      .update({
+        status: 'completed',
+        success_count: successCount,
+        failure_count: failureCount,
+        broadcast_completed_at: new Date().toISOString()
+      })
+      .eq('id', broadcast.id);
+    
+    console.log(`✅ Broadcast completed: ${successCount} success, ${failureCount} failed`);
     
     res.json({ 
       success: true, 
