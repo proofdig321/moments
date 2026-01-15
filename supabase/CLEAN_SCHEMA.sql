@@ -139,6 +139,20 @@ CREATE TABLE IF NOT EXISTS broadcasts (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Broadcast Batches (for parallel processing)
+CREATE TABLE IF NOT EXISTS broadcast_batches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  broadcast_id UUID REFERENCES broadcasts(id) ON DELETE CASCADE,
+  batch_number INTEGER NOT NULL,
+  recipients TEXT[] NOT NULL,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+  success_count INTEGER DEFAULT 0,
+  failure_count INTEGER DEFAULT 0,
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Media Storage
 CREATE TABLE IF NOT EXISTS media (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -216,6 +230,8 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_opted_in ON subscriptions(opted_in)
 CREATE INDEX IF NOT EXISTS idx_messages_from_number ON messages(from_number);
 CREATE INDEX IF NOT EXISTS idx_messages_moderation ON messages(moderation_status);
 CREATE INDEX IF NOT EXISTS idx_broadcasts_moment_id ON broadcasts(moment_id);
+CREATE INDEX IF NOT EXISTS idx_broadcast_batches_broadcast_id ON broadcast_batches(broadcast_id);
+CREATE INDEX IF NOT EXISTS idx_broadcast_batches_status ON broadcast_batches(status);
 CREATE INDEX IF NOT EXISTS idx_advisories_moment_id ON advisories(moment_id);
 CREATE INDEX IF NOT EXISTS idx_moment_intents_moment_id ON moment_intents(moment_id);
 
@@ -228,6 +244,7 @@ ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE broadcasts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE broadcast_batches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE media ENABLE ROW LEVEL SECURITY;
 ALTER TABLE advisories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE moderation_audit ENABLE ROW LEVEL SECURITY;
@@ -251,6 +268,7 @@ CREATE POLICY "Admin full access" ON campaigns FOR ALL USING (is_admin());
 CREATE POLICY "Admin full access" ON subscriptions FOR ALL USING (is_admin());
 CREATE POLICY "Admin full access" ON messages FOR ALL USING (is_admin());
 CREATE POLICY "Admin full access" ON broadcasts FOR ALL USING (is_admin());
+CREATE POLICY "Admin full access" ON broadcast_batches FOR ALL USING (is_admin());
 CREATE POLICY "Admin full access" ON media FOR ALL USING (is_admin());
 CREATE POLICY "Admin full access" ON advisories FOR ALL USING (is_admin());
 CREATE POLICY "Admin full access" ON moderation_audit FOR ALL USING (is_admin());
