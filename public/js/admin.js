@@ -1418,7 +1418,8 @@ window.saveBudgetSettings = async function() {
         
         if (response.ok) {
             showSuccess('Budget settings saved successfully');
-            loadBudgetControls();
+            // Force reload with cache bust
+            setTimeout(() => loadBudgetControls(), 500);
         } else {
             showError('Failed to save budget settings');
         }
