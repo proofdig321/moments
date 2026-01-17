@@ -658,17 +658,15 @@ serve(async (req) => {
               
               console.log('User subscribed and welcomed:', message.from)
             } else if (['stop', 'unsubscribe', 'quit', 'cancel'].includes(text)) {
+              // Update existing subscription to opted_in=false
               const { error: unsubError } = await supabase
                 .from('subscriptions')
-                .upsert({
-                  phone_number: message.from,
+                .update({
                   opted_in: false,
                   opted_out_at: new Date().toISOString(),
                   last_activity: new Date().toISOString()
-                }, { 
-                  onConflict: 'phone_number',
-                  ignoreDuplicates: false 
                 })
+                .eq('phone_number', message.from)
               
               if (unsubError) {
                 console.error('Unsubscription error:', unsubError)
