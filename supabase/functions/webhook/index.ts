@@ -523,7 +523,7 @@ serve(async (req) => {
                 continue
               }
               
-              // MCP Analysis
+              // MCP Analysis with Authority Integration
               try {
                 const content = message.text?.body || message.caption || ''
                 const mcpAnalysis = await analyzeMCPContent(content, message.from)
@@ -540,9 +540,19 @@ serve(async (req) => {
                 
                 console.log(`🔍 MCP Analysis: confidence=${mcpAnalysis.confidence.toFixed(2)}, urgency=${mcpAnalysis.urgency_level}`)
                 
-                if (mcpAnalysis.confidence < 0.3) {
+                // Authority-based auto-approval
+                const threshold = authorityContext?.risk_threshold || 0.3
+                const autoApprove = mcpAnalysis.confidence < threshold
+                
+                if (autoApprove) {
                   await supabase.from('messages').update({
-                    moderation_status: 'approved'
+                    moderation_status: 'approved',
+                    authority_context: {
+                      ...authorityContext,
+                      mcp_confidence: mcpAnalysis.confidence,
+                      auto_approved: true,
+                      threshold_used: threshold
+                    }
                   }).eq('id', messageRecord.id)
                   
                   const { data: autoMoment } = await supabase.from('moments').insert({
@@ -555,7 +565,7 @@ serve(async (req) => {
                     content_source: 'whatsapp'
                   }).select().single()
                   
-                  console.log(`✅ Auto-approved message ${messageRecord.id}, created moment ${autoMoment?.id}`)
+                  console.log(`✅ Auto-approved (threshold=${threshold}): message ${messageRecord.id}, moment ${autoMoment?.id}`)
                 }
               } catch (mcpError) {
                 console.error('MCP analysis failed:', mcpError)
