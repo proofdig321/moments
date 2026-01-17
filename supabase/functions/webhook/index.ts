@@ -105,6 +105,106 @@ async function handleRegionSelection(phoneNumber: string, regionString: string, 
   }
 }
 
+// Rule-based analysis (fallback)
+function ruleBasedAnalysis(content: string) {
+  const lowerContent = content.toLowerCase()
+  let confidence = 0.2
+  const harm_signals: any = {}
+  const spam_indicators: any = {}
+  
+  if (content.includes('http') || content.includes('www.')) {
+    confidence += 0.3
+    spam_indicators.links = true
+  }
+  
+  if (content.length < 10) {
+    confidence += 0.2
+    spam_indicators.too_short = true
+  }
+  
+  const harmWords = ['kill', 'attack', 'bomb', 'weapon', 'violence', 'threat']
+  if (harmWords.some(word => lowerContent.includes(word))) {
+    confidence += 0.5
+    harm_signals.violence = true
+  }
+  
+  const spamWords = ['buy now', 'click here', 'limited time', 'act now', 'free money']
+  if (spamWords.some(phrase => lowerContent.includes(phrase))) {
+    confidence += 0.3
+    spam_indicators.promotional = true
+  }
+  
+  return {
+    confidence: Math.min(confidence, 1.0),
+    harm_signals,
+    spam_indicators,
+    urgency_level: confidence > 0.7 ? 'high' : confidence > 0.4 ? 'medium' : 'low'
+  }
+}
+
+// Claude API analysis
+async function claudeAnalysis(content: string) {
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+  
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey!,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 300,
+      messages: [{
+        role: 'user',
+        content: `Analyze this South African community message for moderation. Return ONLY valid JSON with: confidence (0-1 risk score where 0=safe, 1=harmful), harm_signals (object with violence/harassment/scam booleans), spam_indicators (object with promotional/repetitive/links booleans), urgency_level (low/medium/high).
+
+Message: "${content.replace(/"/g, '\\"')}"
+
+JSON only, no explanation:`
+      }]
+    })
+  })
+  
+  if (!response.ok) {
+    throw new Error(`Claude API error: ${response.status}`)
+  }
+  
+  const result = await response.json()
+  const text = result.content[0].text.trim()
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  const analysis = JSON.parse(jsonMatch ? jsonMatch[0] : text)
+  
+  return {
+    confidence: analysis.confidence || 0.5,
+    harm_signals: analysis.harm_signals || {},
+    spam_indicators: analysis.spam_indicators || {},
+    urgency_level: analysis.urgency_level || 'low'
+  }
+}
+
+// Hybrid MCP Analysis
+async function analyzeMCPContent(content: string, phoneNumber: string) {
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+  
+  // Try Claude API if key exists
+  if (apiKey) {
+    try {
+      const result = await claudeAnalysis(content)
+      console.log(`🤖 Claude analysis: confidence=${result.confidence.toFixed(2)}`)
+      return result
+    } catch (error) {
+      console.warn(`⚠️ Claude API failed, using rules: ${error.message}`)
+    }
+  }
+  
+  // Fallback to rule-based
+  const result = ruleBasedAnalysis(content)
+  console.log(`📋 Rule-based analysis: confidence=${result.confidence.toFixed(2)}`)
+  return result
+}
+
 // WhatsApp API helper function
 async function sendWhatsAppMessage(to: string, message: string) {
   const token = Deno.env.get('WHATSAPP_TOKEN')
@@ -212,6 +312,44 @@ serve(async (req) => {
               if (insertError) {
                 console.error('Failed to insert message:', insertError)
                 continue
+              }
+              
+              // MCP Analysis
+              try {
+                const content = message.text?.body || message.caption || ''
+                const mcpAnalysis = await analyzeMCPContent(content, message.from)
+                
+                await supabase.from('advisories').insert({
+                  message_id: messageRecord.id,
+                  advisory_type: 'content_quality',
+                  confidence: mcpAnalysis.confidence,
+                  harm_signals: mcpAnalysis.harm_signals,
+                  spam_indicators: mcpAnalysis.spam_indicators,
+                  urgency_level: mcpAnalysis.urgency_level,
+                  escalation_suggested: mcpAnalysis.confidence > 0.7
+                })
+                
+                console.log(`🔍 MCP Analysis: confidence=${mcpAnalysis.confidence.toFixed(2)}, urgency=${mcpAnalysis.urgency_level}`)
+                
+                if (mcpAnalysis.confidence < 0.3) {
+                  await supabase.from('messages').update({
+                    moderation_status: 'approved'
+                  }).eq('id', messageRecord.id)
+                  
+                  const { data: autoMoment } = await supabase.from('moments').insert({
+                    title: content.substring(0, 50),
+                    content: content,
+                    region: 'National',
+                    category: 'Community',
+                    status: 'draft',
+                    created_by: 'auto_moderation',
+                    content_source: 'whatsapp'
+                  }).select().single()
+                  
+                  console.log(`✅ Auto-approved message ${messageRecord.id}, created moment ${autoMoment?.id}`)
+                }
+              } catch (mcpError) {
+                console.error('MCP analysis failed:', mcpError)
               }
               
               // Handle media download
