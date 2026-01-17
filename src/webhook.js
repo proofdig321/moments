@@ -5,6 +5,7 @@ import {
   sendWelcomeHybrid, 
   sendUnsubscribeHybrid
 } from './broadcast-hybrid.js';
+import { getAuthorityContext } from './authority.js';
 import axios from 'axios';
 
 export function verifyWebhook(req, res) {
@@ -122,6 +123,21 @@ async function processMessage(message, value) {
     // Detect language
     const languageDetected = detectLanguage(content);
 
+    // Get authority context (async, non-blocking)
+    let authorityContext = null;
+    try {
+      authorityContext = await getAuthorityContext(fromNumber);
+      console.log(`Authority context for ${fromNumber}:`, {
+        hasAuthority: authorityContext.hasAuthority,
+        level: authorityContext.level,
+        role: authorityContext.role,
+        scope: authorityContext.scope
+      });
+    } catch (authorityError) {
+      console.warn('Authority lookup failed (non-blocking):', authorityError.message);
+      // Fail-open: Continue processing without authority context
+    }
+
     // Store message in database and update 24-hour messaging window
     const { data: messageRecord, error: insertError } = await supabase
       .from('messages')
@@ -132,7 +148,15 @@ async function processMessage(message, value) {
         content,
         language_detected: languageDetected,
         media_id: mediaId,
-        processed: false
+        processed: false,
+        // Store authority context as metadata (shadow mode)
+        authority_context: authorityContext ? {
+          has_authority: authorityContext.hasAuthority,
+          level: authorityContext.level,
+          role: authorityContext.role,
+          scope: authorityContext.scope,
+          approval_mode: authorityContext.approvalMode
+        } : null
       })
       .select()
       .single();
@@ -174,7 +198,9 @@ async function processMessage(message, value) {
         message_language: languageDetected,
         message_type: messageType,
         from_number: fromNumber,
-        message_timestamp: new Date().toISOString()
+        message_timestamp: new Date().toISOString(),
+        // Pass authority context to MCP (shadow mode)
+        authority_context: authorityContext
       });
       
       // Note: Soft moderation trigger will automatically process this message

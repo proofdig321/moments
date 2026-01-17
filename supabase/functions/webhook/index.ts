@@ -105,6 +105,33 @@ async function handleRegionSelection(phoneNumber: string, regionString: string, 
   }
 }
 
+// Authority lookup function (Phase 2: Webhook Integration)
+async function lookupAuthority(userIdentifier: string, supabase: any) {
+  if (!userIdentifier) return null;
+  
+  try {
+    const startTime = Date.now();
+    const { data, error } = await supabase.rpc('lookup_authority', {
+      p_user_identifier: userIdentifier
+    });
+    
+    const lookupTime = Date.now() - startTime;
+    
+    if (error) {
+      console.warn(`Authority lookup error for ${userIdentifier} (${lookupTime}ms):`, error.message);
+      return null; // Fail-open
+    }
+    
+    const authorityData = data && data.length > 0 ? data[0] : null;
+    console.log(`Authority lookup for ${userIdentifier}: ${authorityData ? 'found' : 'none'} (${lookupTime}ms)`);
+    
+    return authorityData;
+  } catch (error) {
+    console.error(`Authority lookup exception for ${userIdentifier}:`, error.message);
+    return null; // Fail-open
+  }
+}
+
 // Rule-based analysis (fallback)
 function ruleBasedAnalysis(content: string) {
   const lowerContent = content.toLowerCase()
@@ -459,13 +486,36 @@ serve(async (req) => {
             
             // DON'T store commands in messages table
             if (!isCommand) {
+              // Phase 2: Authority lookup (non-blocking)
+              let authorityContext = null;
+              try {
+                const authority = await lookupAuthority(message.from, supabase);
+                if (authority) {
+                  authorityContext = {
+                    has_authority: true,
+                    level: authority.authority_level || 1,
+                    role: authority.role_label || 'community_member',
+                    scope: authority.scope || 'community',
+                    scope_identifier: authority.scope_identifier,
+                    approval_mode: authority.approval_mode || 'ai_review',
+                    blast_radius: authority.blast_radius || 100,
+                    risk_threshold: authority.risk_threshold || 0.7,
+                    lookup_timestamp: new Date().toISOString()
+                  };
+                }
+              } catch (authorityError) {
+                console.warn('Authority lookup failed (non-blocking):', authorityError.message);
+                // Fail-open: Continue processing without authority context
+              }
+
               const { data: messageRecord, error: insertError } = await supabase.from('messages').insert({
                 whatsapp_id: message.id,
                 from_number: message.from,
                 message_type: message.type,
                 content: message.text?.body || message.caption || '',
                 timestamp: new Date(parseInt(message.timestamp) * 1000).toISOString(),
-                processed: false
+                processed: false,
+                authority_context: authorityContext // Store authority context
               }).select().single()
 
               if (insertError) {

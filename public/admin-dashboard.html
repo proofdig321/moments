@@ -368,6 +368,10 @@
                         <span class="icon icon-settings"></span>
                         <span>Settings</span>
                     </button>
+                    <button class="admin-nav-item" data-section="authority" style="display: none;" id="authority-nav-item">
+                        <span class="icon icon-authority">🔐</span>
+                        <span>Authority</span>
+                    </button>
                     <button class="admin-nav-item" data-section="budget-controls">
                         <span class="icon icon-budget">💰</span>
                         <span>Budget</span>
@@ -1146,6 +1150,150 @@
             </div>
         </div>
 
+        <!-- Authority Management Section -->
+        <div id="authority" class="section">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                    <h2>🔐 Authority Management</h2>
+                    <button class="btn" data-action="create-authority">➕ Assign Authority</button>
+                </div>
+                
+                <div class="alert alert-info" style="margin-bottom: 1rem;">
+                    <strong>Authority System:</strong> Manage user authority levels for content moderation and broadcast controls. Higher authority users get auto-approval and wider reach.
+                </div>
+                
+                <div class="filters">
+                    <select class="filter-select" id="authority-status-filter" data-filter="authority-status">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                        <option value="expired">Expired</option>
+                    </select>
+                    <select class="filter-select" id="authority-scope-filter" data-filter="authority-scope">
+                        <option value="">All Scopes</option>
+                        <option value="school">School</option>
+                        <option value="community">Community</option>
+                        <option value="region">Region</option>
+                        <option value="province">Province</option>
+                        <option value="national">National</option>
+                    </select>
+                    <select class="filter-select" id="authority-level-filter" data-filter="authority-level">
+                        <option value="">All Levels</option>
+                        <option value="1">Level 1 (Basic)</option>
+                        <option value="2">Level 2 (Trusted)</option>
+                        <option value="3">Level 3 (Leader)</option>
+                        <option value="4">Level 4 (Coordinator)</option>
+                        <option value="5">Level 5 (Administrator)</option>
+                    </select>
+                </div>
+                
+                <input type="text" class="search-box" id="authority-search-box" placeholder="Search by phone number or role..." data-search="authority">
+                
+                <div id="authority-list">
+                    <div class="loading">Loading authority profiles...</div>
+                </div>
+                
+                <div id="authority-pagination" class="pagination"></div>
+            </div>
+            
+            <!-- Authority Audit Log -->
+            <div class="card" style="margin-top: 1rem;">
+                <h3>Authority Audit Log</h3>
+                <div id="authority-audit-log">
+                    <div class="loading">Loading audit log...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Authority Form Section -->
+        <div id="authority-form-section" class="form-section section">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 id="authority-form-title">Assign Authority</h2>
+                    <button class="btn btn-secondary" data-action="close-authority-form">← Back</button>
+                </div>
+                <div id="authority-message"></div>
+                <form id="authority-form">
+                    <input type="hidden" id="authority-edit-id" name="id">
+                    
+                    <div class="form-group">
+                        <label>Phone Number *</label>
+                        <input type="tel" name="user_identifier" required placeholder="+27123456789" pattern="\+[1-9]\d{1,14}">
+                        <small style="color: #6b7280;">WhatsApp phone number in international format</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Role Label *</label>
+                        <input type="text" name="role_label" required placeholder="e.g., School Principal, Community Leader" maxlength="100">
+                        <small style="color: #6b7280;">Descriptive role title</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Authority Level *</label>
+                        <select name="authority_level" required id="authority-level-select">
+                            <option value="">Select Level</option>
+                            <option value="1">Level 1 - Basic (Manual review required)</option>
+                            <option value="2">Level 2 - Trusted (AI review, limited reach)</option>
+                            <option value="3">Level 3 - Leader (Auto-approve safe content)</option>
+                            <option value="4">Level 4 - Coordinator (Regional authority)</option>
+                            <option value="5">Level 5 - Administrator (Full authority)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Scope *</label>
+                        <select name="scope" required id="authority-scope-select">
+                            <option value="">Select Scope</option>
+                            <option value="school">School (Specific institution)</option>
+                            <option value="community">Community (Local area)</option>
+                            <option value="region">Region (District/Municipality)</option>
+                            <option value="province">Province (Provincial level)</option>
+                            <option value="national">National (Country-wide)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Scope Identifier</label>
+                        <input type="text" name="scope_identifier" placeholder="e.g., school_001, soweto_central, kzn_durban" maxlength="100">
+                        <small style="color: #6b7280;">Specific identifier for the scope (optional)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Approval Mode *</label>
+                        <select name="approval_mode" required>
+                            <option value="admin_review">Admin Review (Manual approval)</option>
+                            <option value="ai_review">AI Review (Automated with oversight)</option>
+                            <option value="auto">Auto Approve (Trusted sources only)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Blast Radius</label>
+                        <input type="number" name="blast_radius" min="1" max="10000" value="100" placeholder="100">
+                        <small style="color: #6b7280;">Maximum number of subscribers this authority can reach</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Risk Threshold</label>
+                        <input type="number" name="risk_threshold" min="0" max="1" step="0.1" value="0.7" placeholder="0.7">
+                        <small style="color: #6b7280;">MCP confidence threshold for auto-approval (0.0-1.0)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Valid Until</label>
+                        <input type="datetime-local" name="valid_until">
+                        <small style="color: #6b7280;">Leave empty for permanent authority</small>
+                    </div>
+                    
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button type="submit" class="btn" id="authority-submit-btn">Assign Authority</button>
+                        <button type="button" class="btn btn-secondary" data-action="reset-authority-form">Reset</button>
+                        <button type="button" class="btn btn-secondary" onclick="testAuthorityLookup()" id="test-lookup-btn">Test Lookup</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Budget Controls Section -->
         <div id="budget-controls" class="section">
             <div class="card">
@@ -1363,6 +1511,18 @@
         // Action handler for better organization
         function handleAction(action, btn, event) {
             switch (action) {
+                case 'create-authority':
+                    showSection('authority-form-section');
+                    break;
+                case 'close-authority-form':
+                    showSection('authority');
+                    break;
+                case 'reset-authority-form':
+                    document.getElementById('authority-form').reset();
+                    document.getElementById('authority-edit-id').value = '';
+                    document.getElementById('authority-form-title').textContent = 'Assign Authority';
+                    document.getElementById('authority-submit-btn').textContent = 'Assign Authority';
+                    break;
                 case 'create-moment':
                     showSection('create');
                     break;
@@ -1559,6 +1719,211 @@
                     analytics.innerHTML = '<div class="error">Authentication error. Please <a href="/login">login again</a>.</div>';
                 }
             }
+            
+            // Authority Management Functions
+            async function loadAuthorityProfiles() {
+                try {
+                    const token = localStorage.getItem('admin.auth.token');
+                    const response = await fetch('/admin/authority', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to load authority profiles');
+                    
+                    const data = await response.json();
+                    displayAuthorityProfiles(data.authority_profiles || []);
+                    
+                } catch (error) {
+                    const list = document.getElementById('authority-list');
+                    if (list) list.innerHTML = '<div class="error">Failed to load authority profiles</div>';
+                }
+            }
+            
+            function displayAuthorityProfiles(profiles) {
+                const list = document.getElementById('authority-list');
+                if (!list) return;
+                
+                if (profiles.length === 0) {
+                    list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔐</div><p>No authority profiles assigned yet.</p><button class="btn" data-action="create-authority">Assign First Authority</button></div>`;
+                    return;
+                }
+                
+                list.innerHTML = profiles.map(profile => `
+                    <div class="moment-item" data-id="${profile.id}">
+                        <div class="moment-header">
+                            <div class="moment-info">
+                                <div class="moment-title">${profile.role_label}</div>
+                                <div class="moment-meta">📞 ${profile.user_identifier} • Level ${profile.authority_level} • ${profile.scope} • Reach: ${profile.blast_radius}</div>
+                            </div>
+                            <div class="moment-actions">
+                                <span class="status-badge status-${profile.status}">${profile.status}</span>
+                                <button class="btn btn-sm" onclick="editAuthorityProfile('${profile.id}')">Edit</button>
+                                ${profile.status === 'active' ? 
+                                    `<button class="btn btn-sm btn-danger" onclick="suspendAuthorityProfile('${profile.id}')">Suspend</button>` :
+                                    `<button class="btn btn-sm btn-success" onclick="activateAuthorityProfile('${profile.id}')">Activate</button>`
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            window.editAuthorityProfile = async function(profileId) {
+                try {
+                    const token = localStorage.getItem('admin.auth.token');
+                    const response = await fetch(`/admin/authority/${profileId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to load profile');
+                    
+                    const data = await response.json();
+                    const profile = data.authority_profile;
+                    
+                    document.getElementById('authority-edit-id').value = profile.id;
+                    document.querySelector('input[name="user_identifier"]').value = profile.user_identifier;
+                    document.querySelector('input[name="role_label"]').value = profile.role_label;
+                    document.querySelector('select[name="authority_level"]').value = profile.authority_level;
+                    document.querySelector('select[name="scope"]').value = profile.scope;
+                    document.querySelector('input[name="scope_identifier"]').value = profile.scope_identifier || '';
+                    document.querySelector('select[name="approval_mode"]').value = profile.approval_mode;
+                    document.querySelector('input[name="blast_radius"]').value = profile.blast_radius;
+                    document.querySelector('input[name="risk_threshold"]').value = profile.risk_threshold;
+                    
+                    document.getElementById('authority-form-title').textContent = 'Edit Authority';
+                    document.getElementById('authority-submit-btn').textContent = 'Update Authority';
+                    
+                    showSection('authority-form-section');
+                    
+                } catch (error) {
+                    showNotification('Failed to load authority profile: ' + error.message, 'error');
+                }
+            };
+            
+            window.suspendAuthorityProfile = async function(profileId) {
+                if (!confirm('Are you sure you want to suspend this authority profile?')) return;
+                
+                try {
+                    const token = localStorage.getItem('admin.auth.token');
+                    const response = await fetch(`/admin/authority/${profileId}/suspend`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ reason: 'Admin action' })
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to suspend profile');
+                    
+                    showNotification('Authority profile suspended successfully');
+                    await loadAuthorityProfiles();
+                    
+                } catch (error) {
+                    showNotification('Failed to suspend authority profile: ' + error.message, 'error');
+                }
+            };
+            
+            window.activateAuthorityProfile = async function(profileId) {
+                try {
+                    const token = localStorage.getItem('admin.auth.token');
+                    const response = await fetch(`/admin/authority/${profileId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ status: 'active' })
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to activate profile');
+                    
+                    showNotification('Authority profile activated successfully');
+                    await loadAuthorityProfiles();
+                    
+                } catch (error) {
+                    showNotification('Failed to activate authority profile: ' + error.message, 'error');
+                }
+            };
+            
+            // Authority form submission
+            const authorityForm = document.getElementById('authority-form');
+            if (authorityForm) {
+                authorityForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(authorityForm);
+                    const data = Object.fromEntries(formData.entries());
+                    
+                    data.authority_level = parseInt(data.authority_level);
+                    data.blast_radius = parseInt(data.blast_radius) || 100;
+                    data.risk_threshold = parseFloat(data.risk_threshold) || 0.7;
+                    
+                    const isEdit = !!data.id;
+                    const submitBtn = document.getElementById('authority-submit-btn');
+                    
+                    setButtonLoading(submitBtn, true);
+                    
+                    try {
+                        const token = localStorage.getItem('admin.auth.token');
+                        const url = isEdit ? `/admin/authority/${data.id}` : '/admin/authority';
+                        const method = isEdit ? 'PUT' : 'POST';
+                        
+                        const response = await fetch(url, {
+                            method,
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(data)
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Failed to save authority profile');
+                        }
+                        
+                        showNotification(`Authority profile ${isEdit ? 'updated' : 'created'} successfully`);
+                        
+                        authorityForm.reset();
+                        document.getElementById('authority-edit-id').value = '';
+                        showSection('authority');
+                        
+                        await loadAuthorityProfiles();
+                        
+                    } catch (error) {
+                        showNotification('Failed to save authority profile: ' + error.message, 'error');
+                    } finally {
+                        setButtonLoading(submitBtn, false);
+                    }
+                });
+            }
+            
+            // Load authority data when section is shown
+            document.addEventListener('click', (e) => {
+                const navItem = e.target.closest('[data-section="authority"]');
+                if (navItem) {
+                    loadAuthorityProfiles();
+                }
+            });
+            
+            // Show authority nav for content_admin and superadmin
+            setTimeout(() => {
+                const token = localStorage.getItem('admin.auth.token');
+                if (token) {
+                    fetch('/admin/user-role', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.role === 'content_admin' || data.role === 'superadmin') {
+                            const navItem = document.getElementById('authority-nav-item');
+                            if (navItem) navItem.style.display = 'block';
+                        }
+                    })
+                    .catch(() => {});
+                }
+            }, 1000);
         });
     </script>
     <script src="/js/chart.min.js"></script>

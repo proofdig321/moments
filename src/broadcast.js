@@ -1,7 +1,56 @@
 import { supabase } from '../config/supabase.js';
 import { sendWhatsAppMessage } from '../config/whatsapp.js';
 
-// Enhanced broadcast system for community + admin content
+// Authority-based broadcast filtering (Phase 5: Broadcast Integration)
+async function getAuthorityContext(createdBy) {
+  if (!createdBy) return null;
+  
+  try {
+    const { data, error } = await supabase.rpc('lookup_authority', {
+      p_user_identifier: createdBy
+    });
+    
+    if (error) {
+      console.warn(`Authority lookup failed for ${createdBy}:`, error.message);
+      return null; // Fail-open
+    }
+    
+    return data && data.length > 0 ? data[0] : null;
+  } catch (error) {
+    console.error(`Authority lookup exception for ${createdBy}:`, error.message);
+    return null; // Fail-open
+  }
+}
+
+// Apply authority-based subscriber filtering
+function applyAuthorityFiltering(subscribers, authority, moment) {
+  if (!authority) {
+    // No authority - use default limits for safety
+    return subscribers.slice(0, 100); // Default blast radius
+  }
+  
+  let filteredSubscribers = subscribers;
+  
+  // Apply scope filtering
+  if (authority.scope && authority.scope !== 'national') {
+    // For non-national scope, ensure moment region matches authority scope
+    if (moment.region && moment.region !== 'National') {
+      // Authority scope validation happens at moment creation
+      // Here we just apply the blast radius
+    }
+  }
+  
+  // Apply blast radius limit
+  const blastRadius = authority.blast_radius || 100;
+  if (filteredSubscribers.length > blastRadius) {
+    filteredSubscribers = filteredSubscribers.slice(0, blastRadius);
+    console.log(`Authority blast radius applied: ${filteredSubscribers.length}/${subscribers.length} subscribers`);
+  }
+  
+  return filteredSubscribers;
+}
+
+// Enhanced broadcast system for community + admin content with authority controls
 export async function broadcastMoment(momentId) {
   try {
     // Get moment details with sponsor info
@@ -18,6 +67,23 @@ export async function broadcastMoment(momentId) {
       throw new Error('Moment not found');
     }
 
+    // Get authority context for the moment creator (Phase 5: Authority Integration)
+    const authorityContext = await getAuthorityContext(moment.created_by);
+    
+    // Log authority enforcement
+    if (authorityContext) {
+      await supabase.rpc('log_authority_action', {
+        p_authority_profile_id: authorityContext.id,
+        p_action: 'enforced',
+        p_actor_id: null,
+        p_context: {
+          moment_id: momentId,
+          blast_radius: authorityContext.blast_radius,
+          scope: authorityContext.scope
+        }
+      }).catch(err => console.warn('Authority audit log failed:', err.message));
+    }
+
     // Get active subscribers
     let subscriberQuery = supabase
       .from('subscriptions')
@@ -29,16 +95,26 @@ export async function broadcastMoment(momentId) {
       subscriberQuery = subscriberQuery.contains('regions', [moment.region]);
     }
 
-    const { data: subscribers, error: subError } = await subscriberQuery;
+    const { data: allSubscribers, error: subError } = await subscriberQuery;
     if (subError) throw subError;
+    
+    // Apply authority-based filtering (Phase 5: Authority Controls)
+    const subscribers = applyAuthorityFiltering(allSubscribers || [], authorityContext, moment);
 
-    // Create broadcast record
+    // Create broadcast record with authority context
     const { data: broadcast, error: broadcastError } = await supabase
       .from('broadcasts')
       .insert({
         moment_id: momentId,
         recipient_count: subscribers?.length || 0,
-        status: 'in_progress'
+        status: 'in_progress',
+        authority_context: authorityContext ? {
+          authority_id: authorityContext.id,
+          authority_level: authorityContext.authority_level,
+          blast_radius: authorityContext.blast_radius,
+          scope: authorityContext.scope,
+          original_subscriber_count: allSubscribers?.length || 0
+        } : null
       })
       .select()
       .single();

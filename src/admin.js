@@ -1221,4 +1221,215 @@ router.post('/logout', async (req, res) => {
   }
 });
 
+// --- Authority management (Phase 3: Admin API Integration) ---
+// List authority profiles
+router.get('/authority', async (req, res) => {
+  try {
+    const { page = 1, limit = 20, status, scope } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = supabase
+      .from('authority_profiles')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (status) query = query.eq('status', status);
+    if (scope) query = query.eq('scope', scope);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    res.json({ authority_profiles: data || [], page: parseInt(page), limit: parseInt(limit) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get single authority profile
+router.get('/authority/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { data, error } = await supabase
+      .from('authority_profiles')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    res.json({ authority_profile: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create authority profile (content_admin+)
+router.post('/authority', requireRole(['content_admin','superadmin']), async (req, res) => {
+  try {
+    const {
+      user_identifier,
+      authority_level = 1,
+      role_label,
+      scope,
+      scope_identifier,
+      approval_mode = 'ai_review',
+      blast_radius = 100,
+      risk_threshold = 0.7,
+      valid_until,
+      metadata = {}
+    } = req.body;
+
+    if (!user_identifier || !role_label || !scope) {
+      return res.status(400).json({ error: 'Missing required fields: user_identifier, role_label, scope' });
+    }
+
+    const user = await getUserFromRequest(req);
+    
+    const { data: profile, error: insertError } = await supabase
+      .from('authority_profiles')
+      .insert({
+        user_identifier,
+        authority_level,
+        role_label,
+        scope,
+        scope_identifier,
+        approval_mode,
+        blast_radius,
+        risk_threshold,
+        valid_until,
+        metadata,
+        created_by: user?.id,
+        updated_by: user?.id
+      })
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+
+    // Log the creation
+    await supabase.rpc('log_authority_action', {
+      p_authority_profile_id: profile.id,
+      p_action: 'created',
+      p_actor_id: user?.id,
+      p_context: { user_identifier, role_label, scope }
+    });
+
+    res.json({ authority_profile: profile });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update authority profile (content_admin+)
+router.put('/authority/:id', requireRole(['content_admin','superadmin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const user = await getUserFromRequest(req);
+
+    const { data: profile, error: updateError } = await supabase
+      .from('authority_profiles')
+      .update({
+        ...updates,
+        updated_by: user?.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Log the update
+    await supabase.rpc('log_authority_action', {
+      p_authority_profile_id: id,
+      p_action: 'updated',
+      p_actor_id: user?.id,
+      p_context: { updates }
+    });
+
+    res.json({ authority_profile: profile });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Suspend authority profile (superadmin only)
+router.post('/authority/:id/suspend', requireRole(['superadmin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason = 'Admin action' } = req.body;
+    const user = await getUserFromRequest(req);
+
+    const { data: profile, error: updateError } = await supabase
+      .from('authority_profiles')
+      .update({
+        status: 'suspended',
+        updated_by: user?.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Log the suspension
+    await supabase.rpc('log_authority_action', {
+      p_authority_profile_id: id,
+      p_action: 'suspended',
+      p_actor_id: user?.id,
+      p_context: { reason }
+    });
+
+    res.json({ authority_profile: profile, message: 'Authority profile suspended' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get authority audit log
+router.get('/authority/audit', async (req, res) => {
+  try {
+    const { limit = 50 } = req.query;
+    
+    const { data, error } = await supabase
+      .from('authority_audit_log')
+      .select(`
+        *,
+        authority_profiles(user_identifier, role_label)
+      `)
+      .order('timestamp', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    res.json({ audit_log: data || [] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test authority lookup endpoint
+router.get('/authority/lookup/:user_identifier', async (req, res) => {
+  try {
+    const { user_identifier } = req.params;
+    
+    const { data, error } = await supabase.rpc('lookup_authority', {
+      p_user_identifier: user_identifier
+    });
+    
+    if (error) throw error;
+    
+    const authority = data && data.length > 0 ? data[0] : null;
+    res.json({ 
+      user_identifier,
+      authority: authority,
+      has_authority: !!authority
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
