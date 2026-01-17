@@ -394,11 +394,60 @@ serve(async (req) => {
               const buttonId = message.interactive?.button_reply?.id || message.interactive?.list_reply?.id
               console.log(`🔘 Button tapped: ${buttonId} by ${message.from}`)
               
-              // For now, just log - we'll add handlers incrementally
-              // This doesn't break anything, just observes
+              // Handle button as if it were text command
+              if (buttonId === 'btn_regions') {
+                await sendInteractiveList(message.from,
+                  '📍 Choose your regions:',
+                  'Select Regions',
+                  [{
+                    title: 'Provinces',
+                    rows: [
+                      { id: 'KZN', title: '🏖️ KwaZulu-Natal', description: 'KZN' },
+                      { id: 'WC', title: '🍷 Western Cape', description: 'WC' },
+                      { id: 'GP', title: '🏙️ Gauteng', description: 'GP' },
+                      { id: 'EC', title: '🌊 Eastern Cape', description: 'EC' },
+                      { id: 'FS', title: '🌾 Free State', description: 'FS' },
+                      { id: 'LP', title: '🌳 Limpopo', description: 'LP' },
+                      { id: 'MP', title: '⛰️ Mpumalanga', description: 'MP' },
+                      { id: 'NC', title: '🏜️ Northern Cape', description: 'NC' },
+                      { id: 'NW', title: '💎 North West', description: 'NW' }
+                    ]
+                  }]
+                )
+                continue
+              }
               
-              // Continue to process as text command if it matches
-              // This allows gradual migration
+              if (buttonId === 'btn_interests') {
+                await sendInteractiveList(message.from,
+                  '🏷️ Choose your interests:',
+                  'Select Topics',
+                  [{
+                    title: 'Categories',
+                    rows: [
+                      { id: 'EDU', title: '🎓 Education', description: 'Learning' },
+                      { id: 'SAF', title: '🛡️ Safety', description: 'Security' },
+                      { id: 'OPP', title: '💼 Opportunities', description: 'Jobs' },
+                      { id: 'HEA', title: '⚕️ Health', description: 'Wellness' },
+                      { id: 'EVE', title: '🎉 Events', description: 'Gatherings' },
+                      { id: 'CUL', title: '🎭 Culture', description: 'Arts' },
+                      { id: 'TEC', title: '📱 Technology', description: 'Digital' },
+                      { id: 'COM', title: '🏠 Community', description: 'News' }
+                    ]
+                  }]
+                )
+                continue
+              }
+              
+              // Handle region/category selections from list
+              if (['KZN', 'WC', 'GP', 'EC', 'FS', 'LP', 'MP', 'NC', 'NW'].includes(buttonId)) {
+                await handleRegionSelection(message.from, buttonId, supabase)
+                continue
+              }
+              
+              if (['EDU', 'SAF', 'OPP', 'HEA', 'EVE', 'CUL', 'TEC', 'COM'].includes(buttonId)) {
+                await handleCategorySelection(message.from, buttonId, supabase)
+                continue
+              }
             }
             
             // Check if message is a command first
@@ -547,9 +596,15 @@ serve(async (req) => {
                 console.log('✅ User subscribed:', message.from)
               }
               
-              // WhatsApp compliant welcome message
-              const welcomeMsg = `🌟 Welcome to Unami Foundation Moments!\n\nYou'll receive community updates and opportunities across South Africa.\n\n📝 What qualifies as a moment:\n• Local opportunities & events\n• Safety alerts & community news\n• Educational resources & workshops\n• Cultural celebrations & initiatives\n\nCommands:\n• HELP - Show all options\n• MOMENTS - Learn about sharing\n• REGIONS - Choose your areas\n• INTERESTS - Select categories\n• STOP - Unsubscribe\n\n🌐 More: moments.unamifoundation.org/moments`
-              await sendWhatsAppMessage(message.from, welcomeMsg)
+              // Send with buttons
+              await sendInteractiveButtons(message.from,
+                '🌟 Welcome to Unami Foundation Moments!\n\nGet community updates across South Africa.\n\nChoose an option:',
+                [
+                  { id: 'btn_regions', title: '📍 Choose Regions' },
+                  { id: 'btn_interests', title: '🏷️ Choose Interests' },
+                  { id: 'btn_help', title: '❓ Help' }
+                ]
+              )
               
               console.log('User subscribed and welcomed:', message.from)
             } else if (['stop', 'unsubscribe', 'quit', 'cancel'].includes(text)) {
