@@ -1447,16 +1447,51 @@
     </div>
 
     <script>
-        // Minimal inline script - core functionality moved to admin-dashboard-core.js
+        // Authentication check and initialization
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('admin.auth.token');
+            const userInfo = localStorage.getItem('admin.user.info');
+            
+            if (!token || !userInfo) {
+                window.location.href = '/login';
+                return;
+            }
+            
+            let user;
+            try {
+                user = JSON.parse(userInfo);
+            } catch (e) {
+                localStorage.removeItem('admin.auth.token');
+                localStorage.removeItem('admin.user.info');
+                window.location.href = '/login';
+                return;
+            }
+            
+            const userEmailEl = document.getElementById('user-email');
+            const userRoleEl = document.getElementById('user-role');
+            const signOutEl = document.getElementById('sign-out');
+            
+            if (userEmailEl) userEmailEl.textContent = user.name || user.email;
+            if (userRoleEl) userRoleEl.textContent = 'Administrator';
+            
+            if (signOutEl) {
+                signOutEl.addEventListener('click', () => {
+                    localStorage.removeItem('admin.auth.token');
+                    localStorage.removeItem('admin.user.info');
+                    window.location.href = '/login';
+                });
+            }
+            
+            try {
+                await loadAnalytics();
+                await loadRecentActivity();
+                await loadPipelineStatus();
+            } catch (e) {
+                console.warn('Initial load failed:', e);
+            }
+        });
         
-        // Visual confirmation that optimizations are loaded
-        console.log('🚀 Dashboard Optimizations v2.0.4 Loaded');
-        console.log('✅ External CSS: admin-dashboard.css');
-        console.log('✅ External JS: admin-dashboard-core.js');
-        console.log('✅ Performance monitoring active');
-        console.log('✅ Form validation active');
-        console.log('✅ Accessibility enhancements active');
-        console.log('✅ Phase 4: Offline, Search, Reports, AI active');
+        console.log('🚀 Dashboard v2.0.4 Loaded');
         
         // Report functions
         async function generateAndShowReport(type) {
