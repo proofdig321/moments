@@ -9,9 +9,9 @@
     <meta name="theme-color" content="#2563eb">
     <link rel="stylesheet" href="/css/design-system.css">
     <link rel="stylesheet" href="/css/admin-header.css">
+    <link rel="stylesheet" href="/css/admin-dashboard.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; line-height: 1.5; opacity: 0; transition: opacity 0.3s ease; }
+        /* Minimal inline styles for critical rendering */
         
         /* Top Navigation */
         .top-nav { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 200; }
@@ -289,14 +289,11 @@
         .compliance-violations ul {
             margin: 4px 0 0 16px;
         }
-        .compliance-violations li {
-            margin-bottom: 2px;
-        }
     </style>
 </head>
 <body>
     <!-- Top Navigation -->
-    <nav class="top-nav">
+    <nav class="top-nav" role="navigation" aria-label="Main navigation">
         <div class="top-nav-container">
             <a href="/" class="top-nav-logo">
                 <img src="/logo.png" alt="Unami Foundation" style="height: 24px; width: auto; margin-right: 8px; vertical-align: middle;" onerror="this.style.display='none'">
@@ -308,7 +305,7 @@
                 <a href="https://wa.me/27658295041?text=START" target="_blank">Join WhatsApp</a>
                 <a href="/admin-dashboard.html" style="color: #2563eb;">Admin</a>
             </div>
-            <button class="top-nav-toggle" id="top-nav-toggle">☰</button>
+            <button class="top-nav-toggle" id="top-nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
         </div>
     </nav>
 
@@ -322,7 +319,7 @@
                         <span id="user-email"></span>
                         <span class="admin-user-role" id="user-role">Loading...</span>
                     </div>
-                    <button id="sign-out" class="btn btn-sm">
+                    <button id="sign-out" class="btn btn-sm" aria-label="Sign out of admin dashboard">
                         <span class="icon icon-sign-out"></span>
                         Sign Out
                     </button>
@@ -331,52 +328,52 @@
             
             <!-- Section 3: Navigation with horizontal scroll -->
             <div class="admin-nav-container">
-                <nav class="admin-nav" id="admin-nav">
-                    <button class="admin-nav-item active" data-section="dashboard">
+                <nav class="admin-nav" id="admin-nav" role="navigation" aria-label="Admin sections">
+                    <button class="admin-nav-item active" data-section="dashboard" aria-label="Dashboard section" aria-current="page">
                         <span class="icon icon-dashboard"></span>
                         <span>Dashboard</span>
                     </button>
-                    <button class="admin-nav-item" data-section="moments">
+                    <button class="admin-nav-item" data-section="moments" aria-label="Moments section">
                         <span class="icon icon-moments"></span>
                         <span>Moments</span>
                     </button>
-                    <button class="admin-nav-item" data-section="campaigns">
+                    <button class="admin-nav-item" data-section="campaigns" aria-label="Campaigns section">
                         <span class="icon icon-campaigns"></span>
                         <span>Campaigns</span>
                     </button>
-                    <button class="admin-nav-item" data-section="sponsors">
+                    <button class="admin-nav-item" data-section="sponsors" aria-label="Sponsors section">
                         <span class="icon icon-sponsors"></span>
                         <span>Sponsors</span>
                     </button>
-                    <button class="admin-nav-item" data-section="users">
+                    <button class="admin-nav-item" data-section="users" aria-label="Users section">
                         <span class="icon icon-users"></span>
                         <span>Users</span>
                     </button>
-                    <button class="admin-nav-item" data-section="moderation">
+                    <button class="admin-nav-item" data-section="moderation" aria-label="Moderation section">
                         <span class="icon icon-moderation"></span>
                         <span>Moderation</span>
                     </button>
-                    <button class="admin-nav-item" data-section="subscribers">
+                    <button class="admin-nav-item" data-section="subscribers" aria-label="Subscribers section">
                         <span class="icon icon-subscribers"></span>
                         <span>Subscribers</span>
                     </button>
-                    <button class="admin-nav-item" data-section="broadcasts">
+                    <button class="admin-nav-item" data-section="broadcasts" aria-label="Broadcasts section">
                         <span class="icon icon-broadcasts"></span>
                         <span>Broadcasts</span>
                     </button>
-                    <button class="admin-nav-item" data-section="settings">
+                    <button class="admin-nav-item" data-section="settings" aria-label="Settings section">
                         <span class="icon icon-settings"></span>
                         <span>Settings</span>
                     </button>
-                    <button class="admin-nav-item" data-section="authority" id="authority-nav-item">
+                    <button class="admin-nav-item" data-section="authority" id="authority-nav-item" aria-label="Authority management section">
                         <span class="icon icon-authority">🔐</span>
                         <span>Authority</span>
                     </button>
-                    <button class="admin-nav-item" data-section="budget-controls">
+                    <button class="admin-nav-item" data-section="budget-controls" aria-label="Budget controls section">
                         <span class="icon icon-budget">💰</span>
                         <span>Budget</span>
                     </button>
-                    <button class="admin-nav-item" data-section="help">
+                    <button class="admin-nav-item" data-section="help" aria-label="Help section">
                         <span class="icon icon-help"></span>
                         <span>Help</span>
                     </button>
@@ -393,7 +390,7 @@
                     <h2>Analytics Overview</h2>
                     <button class="btn btn-sm" onclick="refreshDashboardAnalytics(this)">🔄 Refresh</button>
                 </div>
-                <div id="analytics" class="analytics-grid">
+                <div id="analytics" class="analytics-grid" role="region" aria-label="Analytics data" aria-live="polite">
                     <div class="loading">Loading analytics...</div>
                 </div>
             </div>
@@ -470,7 +467,7 @@
                         <option value="Technology">Technology</option>
                     </select>
                 </div>
-                <input type="text" class="search-box" id="search-box" placeholder="Search moments..." data-search="moments">
+                <input type="text" class="search-box" id="search-box" placeholder="Search moments..." data-search="moments" aria-label="Search moments">
                 <div id="moments-list">
                     <div class="loading">Loading moments...</div>
                 </div>
@@ -497,7 +494,7 @@
                         <option value="">All Sponsors</option>
                     </select>
                 </div>
-                <input type="text" class="search-box" id="campaign-search-box" placeholder="Search campaigns..." data-search="campaigns">
+                <input type="text" class="search-box" id="campaign-search-box" placeholder="Search campaigns..." data-search="campaigns" aria-label="Search campaigns">
                 <div id="campaigns-list">
                     <div class="loading">Loading campaigns...</div>
                 </div>
@@ -1187,7 +1184,7 @@
                     </select>
                 </div>
                 
-                <input type="text" class="search-box" id="authority-search-box" placeholder="Search by phone number or role..." data-search="authority">
+                <input type="text" class="search-box" id="authority-search-box" placeholder="Search by phone number or role..." data-search="authority" aria-label="Search authority profiles">
                 
                 <div id="authority-list">
                     <div class="loading">Loading authority profiles...</div>
@@ -1353,7 +1350,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title">Confirm Action</h3>
-                <button class="close-btn" data-action="close-confirm-modal">&times;</button>
+                <button class="close-btn" data-action="close-confirm-modal" aria-label="Close modal">&times;</button>
             </div>
             <p id="confirm-message">Are you sure?</p>
             <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
@@ -1364,7 +1361,7 @@
     </div>
 
     <script>
-        // Supabase configuration loaded from admin.js
+        // Minimal inline script - core functionality moved to admin-dashboard-core.js
         
         // Admin navigation toggle
         function toggleAdminNav() {
@@ -1383,11 +1380,8 @@
             // Help tabs
             document.querySelectorAll('.help-tab').forEach(tab => {
                 tab.addEventListener('click', () => {
-                    // Remove active from all tabs and panels
                     document.querySelectorAll('.help-tab').forEach(t => t.classList.remove('active'));
                     document.querySelectorAll('.help-panel').forEach(p => p.classList.remove('active'));
-                    
-                    // Add active to clicked tab and corresponding panel
                     tab.classList.add('active');
                     const panelId = tab.dataset.tab + '-help';
                     document.getElementById(panelId)?.classList.add('active');
@@ -1395,541 +1389,82 @@
             });
         });
         
-        // Utility functions for button states
-        function setButtonLoading(btn, loading = true) {
-            if (loading) {
-                btn.classList.add('loading');
-                btn.disabled = true;
-                btn.dataset.originalText = btn.textContent;
-                btn.textContent = btn.textContent.replace(/🔄|✏️|\+|←/, '').trim();
-            } else {
-                btn.classList.remove('loading');
-                btn.disabled = false;
-                if (btn.dataset.originalText) {
-                    btn.textContent = btn.dataset.originalText;
-                    delete btn.dataset.originalText;
-                }
-            }
-        }
-        
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            notification.className = type;
-            notification.textContent = message;
-            notification.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1001; padding: 1rem; border-radius: 0.5rem; animation: slideIn 0.3s ease;';
-            document.body.appendChild(notification);
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        }
-        
-        // Debounced refresh function
-        let refreshTimeout;
-        function refreshDashboardAnalytics(btn) {
-            if (refreshTimeout) return; // Prevent multiple rapid clicks
-            
-            setButtonLoading(btn, true);
-            refreshTimeout = setTimeout(async () => {
-                try {
-                    await loadAnalytics();
-                    showNotification('Analytics refreshed successfully');
-                } catch (error) {
-                    showNotification('Failed to refresh analytics: ' + error.message, 'error');
-                } finally {
-                    setButtonLoading(btn, false);
-                    refreshTimeout = null;
-                }
-            }, 100); // Small delay to show loading state
-        }
-        
         // Settings functions
         function saveSettings() {
             const autoBroadcast = document.getElementById('auto-broadcast-setting').value;
             const moderationThreshold = document.getElementById('moderation-threshold').value;
-            
             localStorage.setItem('admin.settings.auto_broadcast', autoBroadcast);
             localStorage.setItem('admin.settings.moderation_threshold', moderationThreshold);
-            
-            showNotification('Settings saved successfully');
+            window.dashboardCore.showNotification('Settings saved successfully');
         }
         
         async function uploadLogo(btn) {
             const fileInput = document.getElementById('logo-upload');
             const file = fileInput.files[0];
-            
             if (!file) {
-                showNotification('Please select a logo file first', 'error');
+                window.dashboardCore.showNotification('Please select a logo file first', 'error');
                 return;
             }
-            
-            if (btn) setButtonLoading(btn, true);
-            
+            if (btn) window.dashboardCore.setButtonLoading(btn, true);
             const formData = new FormData();
             formData.append('media_files', file);
-            
             try {
                 const response = await fetch('/admin/upload-media', {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`
-                    },
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` },
                     body: formData
                 });
-                
                 const result = await response.json();
                 if (result.success) {
                     localStorage.setItem('admin.settings.logo_url', result.files[0].publicUrl);
                     document.getElementById('logo-preview-img').src = result.files[0].publicUrl;
                     document.getElementById('logo-preview').style.display = 'block';
-                    
-                    showNotification('Logo uploaded successfully');
+                    window.dashboardCore.showNotification('Logo uploaded successfully');
                 } else {
                     throw new Error(result.error || 'Upload failed');
                 }
             } catch (error) {
-                showNotification('Logo upload failed: ' + error.message, 'error');
+                window.dashboardCore.handleError(error, 'uploadLogo');
             } finally {
-                if (btn) setButtonLoading(btn, false);
+                if (btn) window.dashboardCore.setButtonLoading(btn, false);
             }
         }
         
         async function testWebhook(btn) {
-            if (btn) setButtonLoading(btn, true);
+            if (btn) window.dashboardCore.setButtonLoading(btn, true);
             try {
                 const response = await fetch('/health');
                 if (response.ok) {
-                    showNotification('Webhook test successful - system is responding');
+                    window.dashboardCore.showNotification('Webhook test successful - system is responding');
                 } else {
                     throw new Error('Health check failed');
                 }
             } catch (error) {
-                showNotification('Webhook test failed - connection error', 'error');
+                window.dashboardCore.showNotification('Webhook test failed - connection error', 'error');
             } finally {
-                if (btn) setButtonLoading(btn, false);
+                if (btn) window.dashboardCore.setButtonLoading(btn, false);
             }
         }
         
-        // Action handler for better organization
-        function handleAction(action, btn, event) {
-            switch (action) {
-                case 'create-authority':
-                    document.getElementById('authority-form').reset();
-                    document.getElementById('authority-edit-id').value = '';
-                    document.getElementById('authority-form-title').textContent = 'Assign Authority';
-                    document.getElementById('authority-submit-btn').textContent = 'Assign Authority';
-                    showSection('authority-form-section');
-                    break;
-                case 'close-authority-form':
-                    showSection('authority');
-                    break;
-                case 'reset-authority-form':
-                    document.getElementById('authority-form').reset();
-                    document.getElementById('authority-edit-id').value = '';
-                    document.getElementById('authority-form-title').textContent = 'Assign Authority';
-                    document.getElementById('authority-submit-btn').textContent = 'Assign Authority';
-                    break;
-                case 'create-moment':
-                    showSection('create');
-                    break;
-                case 'create-campaign':
-                    showSection('campaign-form-section');
-                    break;
-                case 'close-campaign-form':
-                    showSection('campaigns');
-                    break;
-                case 'new-sponsor':
-                    showSection('sponsor-form-section');
-                    break;
-                case 'close-sponsor-form':
-                    showSection('sponsors');
-                    break;
-                case 'new-admin-user':
-                    showSection('admin-user-form-section');
-                    break;
-                case 'close-admin-user-form':
-                    showSection('users');
-                    break;
-                case 'back-to-moments':
-                    showSection('moments');
-                    break;
-                // Add more actions as needed
-                default:
-                    console.log('Unhandled action:', action);
-            }
-        }
-        
-        // Fast section switching
-        function showSection(sectionId) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            const target = document.getElementById(sectionId);
-            if (target) {
-                target.classList.add('active');
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-        
-        // Direct Supabase auth check without library
-        async function getSession() {
-            const token = localStorage.getItem('supabase.auth.token');
-            if (!token) return null;
-            try {
-                const parsed = JSON.parse(token);
-                return parsed.access_token ? { user: { email: parsed.user?.email || 'admin' } } : null;
-            } catch {
-                return null;
-            }
-        }
-        
-        async function signOut() {
-            localStorage.removeItem('supabase.auth.token');
-        }
-        
-        // Check authentication on page load
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Show page immediately
-            document.body.style.opacity = '1';
-            
-            // Event delegation for better performance
-            document.addEventListener('click', (e) => {
-                const btn = e.target.closest('button');
-                if (!btn) return;
-                
-                // Immediate visual feedback
-                if (!btn.disabled && !btn.classList.contains('loading')) {
-                    btn.style.transform = 'translateY(0) scale(0.98)';
-                    setTimeout(() => btn.style.transform = '', 100);
-                }
-                
-                // Handle specific actions
-                const action = btn.dataset.action;
-                if (action) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleAction(action, btn, e);
-                }
-            }, true);
-            
-            // Mobile navigation toggle
-            document.getElementById('top-nav-toggle').addEventListener('click', () => {
-                document.getElementById('top-nav-links').classList.toggle('active');
-            });
-            
-            // Close mobile nav when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.top-nav')) {
-                    document.getElementById('top-nav-links').classList.remove('active');
-                }
-            });
-            
-            try {
-                const token = localStorage.getItem('admin.auth.token');
-                const userInfo = localStorage.getItem('admin.user.info');
-                
-                if (!token || !userInfo) {
-                    window.location.href = '/login';
-                    return;
-                }
-                
-                // Validate token format
-                let user;
+        // Debounced refresh function
+        let refreshTimeout;
+        function refreshDashboardAnalytics(btn) {
+            if (refreshTimeout) return;
+            window.dashboardCore.setButtonLoading(btn, true);
+            refreshTimeout = setTimeout(async () => {
                 try {
-                    user = JSON.parse(userInfo);
-                } catch (parseError) {
-                    localStorage.removeItem('admin.auth.token');
-                    localStorage.removeItem('admin.user.info');
-                    window.location.href = '/login';
-                    return;
-                }
-                
-                // Show user info and setup logout
-                const userEmailEl = document.getElementById('user-email');
-                const userRoleEl = document.getElementById('user-role');
-                const signOutEl = document.getElementById('sign-out');
-                
-                if (userEmailEl) userEmailEl.textContent = user.name || user.email;
-                
-                // Fetch user role from server
-                try {
-                    const roleResponse = await fetch(`${SUPABASE_URL}/functions/v1/admin-api/user-role`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
-                    
-                    if (roleResponse.ok) {
-                        const roleData = await roleResponse.json();
-                        const roleDisplay = {
-                            'superadmin': 'Super Administrator',
-                            'content_admin': 'Content Administrator', 
-                            'moderator': 'Moderator',
-                            'viewer': 'Viewer'
-                        }[roleData.role] || 'Administrator';
-                        
-                        if (userRoleEl) userRoleEl.textContent = roleDisplay;
-                    } else {
-                        if (userRoleEl) userRoleEl.textContent = 'Administrator';
-                    }
-                } catch (roleError) {
-                    if (userRoleEl) userRoleEl.textContent = 'Administrator';
-                }
-                
-                if (signOutEl) {
-                    signOutEl.addEventListener('click', async () => {
-                        // Clear all auth data
-                        localStorage.removeItem('admin.auth.token');
-                        localStorage.removeItem('admin.user.info');
-                        localStorage.removeItem('supabase.auth.token');
-                        
-                        // Optional: Call server logout endpoint
-                        try {
-                            await fetch('/admin/logout', {
-                                method: 'POST',
-                                headers: {
-                                    'Authorization': `Bearer ${token}`
-                                }
-                            });
-                        } catch (logoutError) {
-                            // Silent fail
-                        }
-                        
-                        // Redirect to login
-                        window.location.href = '/login';
-                    });
-                }
-                
-                // Show interface immediately, load data in background
-                document.body.style.opacity = '1';
-                
-                // Initialize the admin interface with non-blocking parallel loading
-                const loadPromises = [
-                    loadAnalytics().catch(e => {
-                        const analytics = document.getElementById('analytics');
-                        if (analytics) analytics.innerHTML = '<div class="error">Failed to load analytics</div>';
-                    }),
-                    loadRecentActivity().catch(e => {
-                        const recentActivity = document.getElementById('recent-activity');
-                        if (recentActivity) recentActivity.innerHTML = '<div class="error">Failed to load recent activity</div>';
-                    }),
-                    loadPipelineStatus().catch(e => {
-                        const pipelineStatus = document.getElementById('pipeline-status');
-                        if (pipelineStatus) pipelineStatus.innerHTML = '<div class="error">Failed to load pipeline status</div>';
-                    }),
-                    loadSponsors().catch(e => {
-                        // Silent fail
-                    }),
-                    loadSettings().catch(e => {
-                        // Silent fail
-                    })
-                ];
-                
-                // Don't await - let them load in background
-                Promise.allSettled(loadPromises);
-                
-            } catch (error) {
-                console.error('Auth error:', error);
-                // Don't auto-redirect on errors, show error message instead
-                const analytics = document.getElementById('analytics');
-                if (analytics) {
-                    analytics.innerHTML = '<div class="error">Authentication error. Please <a href="/login">login again</a>.</div>';
-                }
-            }
-            
-            // Authority Management Functions
-            async function loadAuthorityProfiles() {
-                try {
-                    const token = localStorage.getItem('admin.auth.token');
-                    const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-api/authority`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    
-                    if (!response.ok) throw new Error('Failed to load authority profiles');
-                    
-                    const data = await response.json();
-                    displayAuthorityProfiles(data.authority_profiles || []);
-                    
+                    await loadAnalytics();
+                    window.dashboardCore.showNotification('Analytics refreshed successfully');
                 } catch (error) {
-                    const list = document.getElementById('authority-list');
-                    if (list) list.innerHTML = '<div class="error">Failed to load authority profiles</div>';
+                    window.dashboardCore.handleError(error, 'refreshDashboardAnalytics');
+                } finally {
+                    window.dashboardCore.setButtonLoading(btn, false);
+                    refreshTimeout = null;
                 }
-            }
-            
-            function displayAuthorityProfiles(profiles) {
-                const list = document.getElementById('authority-list');
-                if (!list) return;
-                
-                if (profiles.length === 0) {
-                    list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔐</div><p>No authority profiles assigned yet.</p><button class="btn" data-action="create-authority">Assign First Authority</button></div>`;
-                    return;
-                }
-                
-                list.innerHTML = profiles.map(profile => `
-                    <div class="moment-item" data-id="${profile.id}">
-                        <div class="moment-header">
-                            <div class="moment-info">
-                                <div class="moment-title">${profile.role_label}</div>
-                                <div class="moment-meta">📞 ${profile.user_identifier} • Level ${profile.authority_level} • ${profile.scope} • Reach: ${profile.blast_radius}</div>
-                            </div>
-                            <div class="moment-actions">
-                                <span class="status-badge status-${profile.status}">${profile.status}</span>
-                                <button class="btn btn-sm" onclick="editAuthorityProfile('${profile.id}')">Edit</button>
-                                ${profile.status === 'active' ? 
-                                    `<button class="btn btn-sm btn-danger" onclick="suspendAuthorityProfile('${profile.id}')">Suspend</button>` :
-                                    `<button class="btn btn-sm btn-success" onclick="activateAuthorityProfile('${profile.id}')">Activate</button>`
-                                }
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            }
-            
-            window.editAuthorityProfile = async function(profileId) {
-                try {
-                    const token = localStorage.getItem('admin.auth.token');
-                    const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-api/authority/${profileId}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    
-                    if (!response.ok) throw new Error('Failed to load profile');
-                    
-                    const data = await response.json();
-                    const profile = data.authority_profile;
-                    
-                    document.getElementById('authority-edit-id').value = profile.id;
-                    document.querySelector('input[name="user_identifier"]').value = profile.user_identifier;
-                    document.querySelector('input[name="role_label"]').value = profile.role_label;
-                    document.querySelector('select[name="authority_level"]').value = profile.authority_level;
-                    document.querySelector('select[name="scope"]').value = profile.scope;
-                    document.querySelector('input[name="scope_identifier"]').value = profile.scope_identifier || '';
-                    document.querySelector('select[name="approval_mode"]').value = profile.approval_mode;
-                    document.querySelector('input[name="blast_radius"]').value = profile.blast_radius;
-                    document.querySelector('input[name="risk_threshold"]').value = profile.risk_threshold;
-                    
-                    document.getElementById('authority-form-title').textContent = 'Edit Authority';
-                    document.getElementById('authority-submit-btn').textContent = 'Update Authority';
-                    
-                    showSection('authority-form-section');
-                    
-                } catch (error) {
-                    showNotification('Failed to load authority profile: ' + error.message, 'error');
-                }
-            };
-            
-            window.suspendAuthorityProfile = async function(profileId) {
-                if (!confirm('Are you sure you want to suspend this authority profile?')) return;
-                
-                try {
-                    const token = localStorage.getItem('admin.auth.token');
-                    const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-api/authority/${profileId}/suspend`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ reason: 'Admin action' })
-                    });
-                    
-                    if (!response.ok) throw new Error('Failed to suspend profile');
-                    
-                    showNotification('Authority profile suspended successfully');
-                    await loadAuthorityProfiles();
-                    
-                } catch (error) {
-                    showNotification('Failed to suspend authority profile: ' + error.message, 'error');
-                }
-            };
-            
-            window.activateAuthorityProfile = async function(profileId) {
-                try {
-                    const token = localStorage.getItem('admin.auth.token');
-                    const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-api/authority/${profileId}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ status: 'active' })
-                    });
-                    
-                    if (!response.ok) throw new Error('Failed to activate profile');
-                    
-                    showNotification('Authority profile activated successfully');
-                    await loadAuthorityProfiles();
-                    
-                } catch (error) {
-                    showNotification('Failed to activate authority profile: ' + error.message, 'error');
-                }
-            };
-            
-            // Authority form submission
-            const authorityForm = document.getElementById('authority-form');
-            if (authorityForm) {
-                authorityForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    
-                    const formData = new FormData(authorityForm);
-                    const data = Object.fromEntries(formData.entries());
-                    
-                    data.authority_level = parseInt(data.authority_level);
-                    data.blast_radius = parseInt(data.blast_radius) || 100;
-                    data.risk_threshold = parseFloat(data.risk_threshold) || 0.7;
-                    
-                    const isEdit = !!data.id;
-                    const submitBtn = document.getElementById('authority-submit-btn');
-                    
-                    setButtonLoading(submitBtn, true);
-                    
-                    try {
-                        const token = localStorage.getItem('admin.auth.token');
-                        const url = isEdit ? `${SUPABASE_URL}/functions/v1/admin-api/authority/${data.id}` : `${SUPABASE_URL}/functions/v1/admin-api/authority`;
-                        const method = isEdit ? 'PUT' : 'POST';
-                        
-                        const response = await fetch(url, {
-                            method,
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(data)
-                        });
-                        
-                        if (!response.ok) {
-                            const errorData = await response.json();
-                            throw new Error(errorData.error || 'Failed to save authority profile');
-                        }
-                        
-                        showNotification(`Authority profile ${isEdit ? 'updated' : 'created'} successfully`);
-                        
-                        authorityForm.reset();
-                        document.getElementById('authority-edit-id').value = '';
-                        showSection('authority');
-                        
-                        await loadAuthorityProfiles();
-                        
-                    } catch (error) {
-                        showNotification('Failed to save authority profile: ' + error.message, 'error');
-                    } finally {
-                        setButtonLoading(submitBtn, false);
-                    }
-                });
-            }
-            
-            // Load authority data when section is shown
-            document.querySelectorAll('[data-section]').forEach(navBtn => {
-                navBtn.addEventListener('click', (e) => {
-                    const section = navBtn.dataset.section;
-                    if (section === 'authority') {
-                        loadAuthorityProfiles();
-                    }
-                    showSection(section);
-                });
-            });
-            
-            // Show authority nav immediately for all admins
-            const navItem = document.getElementById('authority-nav-item');
-            if (navItem) navItem.style.display = 'block';
-        });
+            }, 100);
+        }
     </script>
+    <script src="/js/admin-dashboard-core.js"></script>
     <script src="/js/chart.min.js"></script>
     <script src="/js/admin.js?v=1.1.3"></script>
     <script src="/js/analytics.js"></script>
