@@ -1998,27 +1998,30 @@ ${moment.content}${sponsorText}
 
     if (path.match(/\/authority\/[a-f0-9-]{36}$/) && method === 'GET') {
       const id = path.split('/authority/')[1]
-      try {
-        const { data, error } = await supabase
-          .from('authority_profiles')
-          .select('*')
-          .eq('id', id)
-          .single()
+      const { data, error } = await supabase
+        .from('authority_profiles')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
 
-        if (error) {
-          console.error('Authority profile fetch error:', error)
-          throw error
-        }
-        return new Response(JSON.stringify({ authority_profile: data }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      } catch (error) {
-        console.error('Authority GET error:', error)
-        return new Response(JSON.stringify({ error: error.message || 'Failed to fetch authority profile' }), {
+      if (error) {
+        console.error('Authority profile fetch error:', error)
+        return new Response(JSON.stringify({ error: error.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
+
+      if (!data) {
+        return new Response(JSON.stringify({ error: 'Authority profile not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      return new Response(JSON.stringify({ authority_profile: data }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
     if (path.includes('/authority') && method === 'POST' && body) {
