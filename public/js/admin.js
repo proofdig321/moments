@@ -982,9 +982,13 @@ async function loadBroadcasts() {
     }
 }
 
-// Load moderation with comments
-async function loadModeration() {
+// Load moderation with comments and pagination
+let moderationPage = 1;
+const moderationPerPage = 10;
+
+async function loadModeration(page = 1) {
     try {
+        moderationPage = page;
         const filter = document.getElementById('moderation-filter')?.value || 'all';
         const response = await apiFetch(`/moderation?filter=${filter}`);
         const data = await response.json();
@@ -992,7 +996,12 @@ async function loadModeration() {
         const moderationList = document.getElementById('moderation-list');
         if (!moderationList) return;
         
-        const messages = data.flaggedMessages || [];
+        const allMessages = data.flaggedMessages || [];
+        
+        // Pagination
+        const startIdx = (moderationPage - 1) * moderationPerPage;
+        const endIdx = startIdx + moderationPerPage;
+        const messages = allMessages.slice(startIdx, endIdx);
         
         if (messages.length > 0) {
             const html = messages.map(item => {
@@ -1061,6 +1070,17 @@ async function loadModeration() {
                 `;
             }).join('');
             moderationList.innerHTML = html;
+            
+            // Add pagination
+            if (window.dashboardCore && window.dashboardCore.createPagination) {
+                window.dashboardCore.createPagination(
+                    'moderation-pagination',
+                    allMessages.length,
+                    moderationPerPage,
+                    moderationPage,
+                    (newPage) => loadModeration(newPage)
+                );
+            }
         } else {
             moderationList.innerHTML = `
                 <div class="empty-state">
@@ -1069,6 +1089,7 @@ async function loadModeration() {
                     <p>All messages are clean or no items match the current filter.</p>
                 </div>
             `;
+            document.getElementById('moderation-pagination').innerHTML = '';
         }
     } catch (error) {
         console.error('Moderation load error:', error);
